@@ -14,5 +14,10 @@ public class Cliente
 
     public bool Attivo { get; set; } = true;
 
+    /// <summary>
+    /// Colore di sfondo (formato esadecimale, es. #RRGGBB) da usare per le righe del cliente nel timesheet.
+    /// </summary>
+    public string? Colore { get; set; }
+
     public ICollection<Progetto> Progetti { get; set; } = new List<Progetto>();
 }

@@ -38,7 +38,8 @@ public class CreateModel : PageModel
         {
             UtenteId = utenteId,
             Nome = Cliente.Nome,
-            Attivo = Cliente.Attivo
+            Attivo = Cliente.Attivo,
+            Colore = Cliente.Colore
         };
 
         _dbContext.Clienti.Add(cliente);
@@ -55,5 +56,8 @@ public class CreateModel : PageModel
 
         [Display(Name = "Attivo")]
         public bool Attivo { get; set; } = true;
+
+        [Display(Name = "Colore")]
+        public string? Colore { get; set; } = "#eef7f7";
     }
 }

@@ -36,7 +36,8 @@ public class EditModel : PageModel
         {
             Id = cliente.Id,
             Nome = cliente.Nome,
-            Attivo = cliente.Attivo
+            Attivo = cliente.Attivo,
+            Colore = cliente.Colore
         };
 
         return Page();
@@ -59,6 +60,7 @@ public class EditModel : PageModel
 
         cliente.Nome = Cliente.Nome;
         cliente.Attivo = Cliente.Attivo;
+        cliente.Colore = Cliente.Colore;
 
         await _dbContext.SaveChangesAsync();
 
@@ -75,5 +77,8 @@ public class EditModel : PageModel
 
         [Display(Name = "Attivo")]
         public bool Attivo { get; set; } = true;
+
+        [Display(Name = "Colore")]
+        public string? Colore { get; set; }
     }
 }

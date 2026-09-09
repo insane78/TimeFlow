@@ -216,6 +216,15 @@
         return input ? input.value : '';
     }
 
+    function aggiornaColoreRiga(tr, colore) {
+        tr.querySelectorAll('td').forEach(function (td) {
+            if (td.classList.contains('tf-weekend') || td.classList.contains('tf-festivo') || td.classList.contains('tf-totale')) {
+                return;
+            }
+            td.style.backgroundColor = colore || '';
+        });
+    }
+
     function aggiungiRiga(riga) {
         var tr = document.createElement('tr');
 
@@ -244,6 +253,7 @@
             celProgetto.input.value = '';
             celAttivita.input.value = '';
             aggiornaDatalist(attIdList, []);
+            aggiornaColoreRiga(tr, cliente ? cliente.colore : null);
         });
 
         celProgetto.input.addEventListener('change', function () {
@@ -284,6 +294,7 @@
 
         tbody.appendChild(tr);
         calcolaTotaleRiga(tr);
+        aggiornaColoreRiga(tr, clienteIniziale ? clienteIniziale.colore : null);
     }
 
     function calcolaTotaliColonne() {
@@ -334,7 +345,7 @@
         btnEsportaMese.className = 'btn btn-sm btn-outline-secondary me-1';
         btnEsportaMese.textContent = 'Esporta mese';
         btnEsportaMese.addEventListener('click', function () {
-            // TODO: implementare esportazione mese
+            window.location.href = data.esportaMeseUrl;
         });
 
         var btnEsportaCliente = document.createElement('button');
@@ -342,7 +353,7 @@
         btnEsportaCliente.className = 'btn btn-sm btn-outline-secondary';
         btnEsportaCliente.textContent = 'Esporta per cliente';
         btnEsportaCliente.addEventListener('click', function () {
-            // TODO: implementare esportazione per cliente
+            apriModalEsportaCliente();
         });
 
         tdComandi.appendChild(btnAggiungi);
@@ -381,6 +392,48 @@
         while (tbody.rows.length < RIGHE_VISIBILI) {
             aggiungiRiga(rigaVuota());
         }
+    }
+
+    function apriModalEsportaCliente() {
+        var select = document.getElementById('tf-esporta-cliente-select');
+        if (select && select.options.length === 0) {
+            data.clienti
+                .slice()
+                .sort(function (a, b) { return a.nome.localeCompare(b.nome); })
+                .forEach(function (c) {
+                    var opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.nome;
+                    select.appendChild(opt);
+                });
+        }
+
+        var modalEl = document.getElementById('tf-modal-esporta-cliente');
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
+    var btnConfermaEsportaCliente = document.getElementById('tf-esporta-cliente-conferma');
+    if (btnConfermaEsportaCliente) {
+        btnConfermaEsportaCliente.addEventListener('click', function () {
+            var select = document.getElementById('tf-esporta-cliente-select');
+            var clienteId = select && select.value;
+            if (!clienteId) {
+                return;
+            }
+            var annoIntero = document.getElementById('tf-esporta-cliente-anno').checked;
+            var separatore = data.esportaClienteUrlBase.indexOf('?') === -1 ? '?' : '&';
+            var url = data.esportaClienteUrlBase
+                + separatore + 'clienteId=' + encodeURIComponent(clienteId)
+                + '&anno=' + encodeURIComponent(data.anno)
+                + '&mese=' + encodeURIComponent(data.mese)
+                + '&annoIntero=' + (annoIntero ? 'true' : 'false');
+            window.location.href = url;
+
+            var modalEl = document.getElementById('tf-modal-esporta-cliente');
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.hide();
+        });
     }
 
     righeDati.forEach(aggiungiRiga);

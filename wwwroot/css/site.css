@@ -50,6 +50,23 @@ header .navbar {
   color: var(--tf-primary-dark) !important;
 }
 
+.tf-user-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--tf-secondary);
+  border-radius: 999px;
+  background-color: var(--tf-surface);
+  color: #0d6efd !important;
+  font-weight: 600;
+}
+
+.tf-nav-icon {
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.35rem;
+  vertical-align: -0.15em;
+}
+
 .btn-primary {
   background-color: var(--tf-primary);
   border-color: var(--tf-primary);
@@ -234,7 +251,17 @@ footer.footer {
 }
 
 .tf-grid thead th:nth-child(1),
-.tf-grid thead th:nth-child(2),
+.tf-grid thead th:nth-child(2) {
+  width: 182px;
+  text-align: left;
+  background-color: #52697a;
+  color: #f8f9fa;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
 .tf-grid thead th:nth-child(3) {
   width: 260px;
   text-align: left;
@@ -247,7 +274,11 @@ footer.footer {
 }
 
 .tf-grid tbody td:nth-child(1),
-.tf-grid tbody td:nth-child(2),
+.tf-grid tbody td:nth-child(2) {
+  width: 182px;
+  text-align: left;
+}
+
 .tf-grid tbody td:nth-child(3) {
   width: 260px;
   text-align: left;

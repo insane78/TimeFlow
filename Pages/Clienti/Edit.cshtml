@@ -18,6 +18,11 @@
         <input asp-for="Cliente.Attivo" class="form-check-input" />
         <label asp-for="Cliente.Attivo" class="form-check-label"></label>
     </div>
+    <div class="mb-3">
+        <label asp-for="Cliente.Colore" class="form-label"></label>
+        <input asp-for="Cliente.Colore" type="color" class="form-control form-control-color" />
+        <span asp-validation-for="Cliente.Colore" class="text-danger"></span>
+    </div>
     <button type="submit" class="btn btn-primary">Salva</button>
     <a class="btn btn-secondary" asp-page="./Index">Annulla</a>
 </form>

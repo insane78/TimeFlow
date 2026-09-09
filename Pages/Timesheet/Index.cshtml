@@ -22,6 +22,38 @@
     <div id="timesheet-grid"></div>
 </div>
 
+<div class="modal fade" id="tf-modal-esporta-cliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Esporta per cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="tf-esporta-cliente-select" class="form-label">Cliente</label>
+                    <select id="tf-esporta-cliente-select" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label d-block">Periodo</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tf-esporta-cliente-periodo" id="tf-esporta-cliente-mese" value="mese">
+                        <label class="form-check-label" for="tf-esporta-cliente-mese">Timesheet corrente (mese)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tf-esporta-cliente-periodo" id="tf-esporta-cliente-anno" value="anno" checked>
+                        <label class="form-check-label" for="tf-esporta-cliente-anno">Anno corrente</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-primary" id="tf-esporta-cliente-conferma">Esporta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @{
     var opzioniJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 }
@@ -35,7 +67,9 @@
             giorni: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Giorni, opzioniJson)),
             righe: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Righe, opzioniJson)),
             clienti: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Clienti, opzioniJson)),
-            salvaCellaUrl: '@Url.Page("./Index", "SalvaCella")'
+            salvaCellaUrl: '@Url.Page("./Index", "SalvaCella")',
+            esportaMeseUrl: '@Url.Page("./Index", "EsportaMese", new { anno = Model.Anno, mese = Model.Mese })',
+            esportaClienteUrlBase: '@Url.Page("./Index", "EsportaCliente")'
         };
     </script>
     <script src="~/js/timesheet.js" asp-append-version="true"></script>

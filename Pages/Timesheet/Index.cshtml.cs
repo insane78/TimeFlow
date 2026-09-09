@@ -1,4 +1,5 @@
 using System.Globalization;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -44,6 +45,7 @@ public class IndexModel : PageModel
             {
                 Id = c.Id,
                 Nome = c.Nome,
+                Colore = c.Colore,
                 Progetti = c.Progetti.OrderBy(p => p.Nome).Select(p => new ProgettoDto
                 {
                     Id = p.Id,
@@ -75,6 +77,7 @@ public class IndexModel : PageModel
                 {
                     ClienteId = prima.Progetto.ClienteId,
                     ClienteNome = prima.Progetto.Cliente.Nome,
+                    ClienteColore = prima.Progetto.Cliente.Colore,
                     ProgettoId = prima.ProgettoId,
                     ProgettoNome = prima.Progetto.Nome,
                     AttivitaId = prima.AttivitaId,
@@ -91,6 +94,390 @@ public class IndexModel : PageModel
             })
             .OrderBy(r => r.ClienteNome).ThenBy(r => r.ProgettoNome).ThenBy(r => r.AttivitaNome)
             .ToList();
+    }
+
+    public async Task<IActionResult> OnGetEsportaMeseAsync(int anno, int mese)
+    {
+        Anno = anno;
+        Mese = mese;
+        CalcolaGiorni();
+
+        var utenteId = int.Parse(_userManager.GetUserId(User)!);
+        var utente = await _userManager.FindByIdAsync(utenteId.ToString());
+        var nomeCompleto = utente?.NomeCompleto ?? string.Empty;
+
+        var primoGiorno = new DateOnly(Anno, Mese, 1);
+        var ultimoGiorno = primoGiorno.AddMonths(1).AddDays(-1);
+
+        var registrazioni = await _dbContext.RegistrazioniOre
+            .Include(r => r.Progetto).ThenInclude(p => p.Cliente)
+            .Include(r => r.Attivita)
+            .Where(r => r.UtenteId == utenteId && r.Data >= primoGiorno && r.Data <= ultimoGiorno)
+            .ToListAsync();
+
+        Righe = registrazioni
+            .GroupBy(r => new { r.ProgettoId, r.AttivitaId })
+            .Select(g =>
+            {
+                var prima = g.First();
+                var riga = new RigaTimesheet
+                {
+                    ClienteId = prima.Progetto.ClienteId,
+                    ClienteNome = prima.Progetto.Cliente.Nome,
+                    ClienteColore = prima.Progetto.Cliente.Colore,
+                    ProgettoId = prima.ProgettoId,
+                    ProgettoNome = prima.Progetto.Nome,
+                    AttivitaId = prima.AttivitaId,
+                    AttivitaNome = prima.Attivita?.Nome,
+                    Ore = new decimal?[GiorniNelMese]
+                };
+
+                foreach (var r in g)
+                {
+                    riga.Ore[r.Data.Day - 1] = r.Ore;
+                }
+
+                return riga;
+            })
+            .OrderBy(r => r.ClienteNome).ThenBy(r => r.ProgettoNome).ThenBy(r => r.AttivitaNome)
+            .ToList();
+
+        using var workbook = new XLWorkbook();
+        var foglio = workbook.Worksheets.Add("Timesheet");
+
+        const string coloreIntestazione = "#52697A";
+        const string coloreTestoIntestazione = "#F8F9FA";
+        const string coloreWeekend = "#D6E9FB";
+        const string coloreFestivo = "#FDE2E2";
+        const string coloreEtichetta = "#DCEFED";
+
+        var colonneTotali = 3 + GiorniNelMese + 1;
+
+        var rigaTitolo = foglio.Row(1);
+        var titolo = foglio.Cell(1, 1);
+        titolo.Value = $"{nomeCompleto} - Consuntivazione mensile per il mese di {MeseNome} {Anno}";
+        foglio.Range(1, 1, 1, colonneTotali).Merge();
+        titolo.Style.Font.Bold = true;
+        titolo.Style.Font.FontSize = 14;
+        titolo.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+        rigaTitolo.Height = 24;
+
+        const int rigaHeader = 3;
+
+        void ImpostaHeader(int colonna, string testo)
+        {
+            var cella = foglio.Cell(rigaHeader, colonna);
+            cella.Value = testo;
+            cella.Style.Font.Bold = true;
+            cella.Style.Font.FontColor = XLColor.FromHtml(coloreTestoIntestazione);
+            cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+            cella.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cella.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        foglio.Row(rigaHeader).Height = 22;
+
+        ImpostaHeader(1, "Cliente");
+        ImpostaHeader(2, "Progetto");
+        ImpostaHeader(3, "Attività");
+
+        for (var i = 0; i < Giorni.Count; i++)
+        {
+            var g = Giorni[i];
+            var colonna = 4 + i;
+            var cella = foglio.Cell(rigaHeader, colonna);
+            cella.Value = $"{g.NomeGiornoBreve} {g.Giorno}";
+            cella.Style.Font.Bold = true;
+            cella.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cella.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            if (g.Festivo)
+            {
+                cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreFestivo);
+            }
+            else if (g.Weekend)
+            {
+                cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreWeekend);
+            }
+            else
+            {
+                cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+                cella.Style.Font.FontColor = XLColor.FromHtml(coloreTestoIntestazione);
+            }
+
+            foglio.Column(colonna).Width = 6;
+        }
+
+        ImpostaHeader(4 + GiorniNelMese, "Totale");
+
+        var rigaCorrente = rigaHeader + 1;
+        foreach (var riga in Righe)
+        {
+            foglio.Row(rigaCorrente).Height = 20;
+            foglio.Cell(rigaCorrente, 1).Value = riga.ClienteNome;
+            foglio.Cell(rigaCorrente, 2).Value = riga.ProgettoNome;
+            foglio.Cell(rigaCorrente, 3).Value = riga.AttivitaNome ?? string.Empty;
+            foglio.Range(rigaCorrente, 1, rigaCorrente, 3).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            var coloreRiga = !string.IsNullOrWhiteSpace(riga.ClienteColore) ? riga.ClienteColore : null;
+
+            decimal totaleRiga = 0;
+            for (var i = 0; i < GiorniNelMese; i++)
+            {
+                var colonna = 4 + i;
+                var cella = foglio.Cell(rigaCorrente, colonna);
+                var ore = riga.Ore[i];
+                if (ore is not null)
+                {
+                    cella.Value = ore.Value;
+                    totaleRiga += ore.Value;
+                }
+                cella.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cella.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+                var giornoInfo = Giorni[i];
+                if (giornoInfo.Festivo)
+                {
+                    cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreFestivo);
+                }
+                else if (giornoInfo.Weekend)
+                {
+                    cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreWeekend);
+                }
+                else if (coloreRiga is not null)
+                {
+                    cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreRiga);
+                }
+            }
+
+            for (var colonna = 1; colonna <= 3; colonna++)
+            {
+                var cella = foglio.Cell(rigaCorrente, colonna);
+                cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                cella.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                if (coloreRiga is not null)
+                {
+                    cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreRiga);
+                }
+            }
+
+            var celleTotale = foglio.Cell(rigaCorrente, 4 + GiorniNelMese);
+            celleTotale.Value = totaleRiga;
+            celleTotale.Style.Font.Bold = true;
+            celleTotale.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+            celleTotale.Style.Font.FontColor = XLColor.FromHtml(coloreTestoIntestazione);
+            celleTotale.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            celleTotale.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            rigaCorrente++;
+        }
+
+        var rigaTotali = rigaCorrente;
+        foglio.Row(rigaTotali).Height = 20;
+        var etichettaTotali = foglio.Cell(rigaTotali, 2);
+        etichettaTotali.Value = "Totale";
+        etichettaTotali.Style.Font.Bold = true;
+        etichettaTotali.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreEtichetta);
+        etichettaTotali.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        foglio.Range(rigaTotali, 1, rigaTotali, 3).Merge();
+
+        decimal totaleGenerale = 0;
+        for (var i = 0; i < GiorniNelMese; i++)
+        {
+            var colonna = 4 + i;
+            decimal totaleColonna = 0;
+            for (var r = rigaHeader + 1; r < rigaTotali; r++)
+            {
+                var valore = foglio.Cell(r, colonna).GetValue<double?>();
+                if (valore is not null)
+                {
+                    totaleColonna += (decimal)valore.Value;
+                }
+            }
+
+            var cella = foglio.Cell(rigaTotali, colonna);
+            if (totaleColonna > 0)
+            {
+                cella.Value = totaleColonna;
+            }
+            cella.Style.Font.Bold = true;
+            cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+            cella.Style.Font.FontColor = XLColor.FromHtml(coloreTestoIntestazione);
+            cella.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            totaleGenerale += totaleColonna;
+        }
+
+        var cellaTotaleGenerale = foglio.Cell(rigaTotali, 4 + GiorniNelMese);
+        cellaTotaleGenerale.Value = totaleGenerale;
+        cellaTotaleGenerale.Style.Font.Bold = true;
+        cellaTotaleGenerale.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+        cellaTotaleGenerale.Style.Font.FontColor = XLColor.FromHtml(coloreTestoIntestazione);
+        cellaTotaleGenerale.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        cellaTotaleGenerale.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+        foglio.Column(1).Width = 26;
+        foglio.Column(2).Width = 26;
+        foglio.Column(3).Width = 26;
+        foglio.SheetView.FreezeRows(rigaHeader);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        var nomeMeseFile = MeseNome.ToLower(new CultureInfo("it-IT"));
+        var nomeFile = $"Consuntivi {nomeMeseFile} {Anno} - {nomeCompleto}.xlsx";
+
+        return File(
+            stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            nomeFile);
+    }
+
+    public async Task<IActionResult> OnGetEsportaClienteAsync(int clienteId, int anno, int mese, bool annoIntero)
+    {
+        var utenteId = int.Parse(_userManager.GetUserId(User)!);
+        var utente = await _userManager.FindByIdAsync(utenteId.ToString());
+        var nomeCompleto = utente?.NomeCompleto ?? string.Empty;
+
+        var cliente = await _dbContext.Clienti.FirstOrDefaultAsync(c => c.Id == clienteId && c.UtenteId == utenteId);
+        if (cliente == null)
+        {
+            return NotFound();
+        }
+
+        DateOnly dataInizio;
+        DateOnly dataFine;
+        if (annoIntero)
+        {
+            dataInizio = new DateOnly(anno, 1, 1);
+            dataFine = new DateOnly(anno, 12, 31);
+        }
+        else
+        {
+            dataInizio = new DateOnly(anno, mese, 1);
+            dataFine = dataInizio.AddMonths(1).AddDays(-1);
+        }
+
+        var registrazioni = await _dbContext.RegistrazioniOre
+            .Include(r => r.Progetto).ThenInclude(p => p.Cliente)
+            .Include(r => r.Attivita)
+            .Where(r => r.UtenteId == utenteId
+                && r.Progetto.ClienteId == clienteId
+                && r.Data >= dataInizio && r.Data <= dataFine)
+            .OrderBy(r => r.Data)
+            .ThenBy(r => r.Progetto.Nome)
+            .ThenBy(r => r.Attivita != null ? r.Attivita.Nome : string.Empty)
+            .ToListAsync();
+
+        const string coloreIntestazione = "#B7F0F0";
+
+        using var workbook = new XLWorkbook();
+        var foglio = workbook.Worksheets.Add("Consuntivo");
+
+        void ImpostaHeader(int colonna, string testo)
+        {
+            var cella = foglio.Cell(1, colonna);
+            cella.Value = testo;
+            cella.Style.Font.Bold = true;
+            cella.Style.Fill.BackgroundColor = XLColor.FromHtml(coloreIntestazione);
+            cella.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            cella.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+        }
+
+        foglio.Row(1).Height = 20;
+        ImpostaHeader(1, "Data");
+        ImpostaHeader(2, "Ore");
+        ImpostaHeader(3, "Luogo");
+        ImpostaHeader(4, "Fornitori coinvolti");
+        ImpostaHeader(5, "Progetto");
+        ImpostaHeader(6, "Attività");
+        ImpostaHeader(7, "Riferimenti");
+
+        var rigaCorrente = 2;
+        decimal totaleOre = 0;
+        foreach (var r in registrazioni)
+        {
+            foglio.Row(rigaCorrente).Height = 18;
+
+            var cellaData = foglio.Cell(rigaCorrente, 1);
+            cellaData.Value = r.Data.ToDateTime(TimeOnly.MinValue);
+            cellaData.Style.DateFormat.Format = "dd/mm/yyyy";
+            cellaData.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaOre = foglio.Cell(rigaCorrente, 2);
+            cellaOre.Value = r.Ore;
+            cellaOre.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaLuogo = foglio.Cell(rigaCorrente, 3);
+            cellaLuogo.Value = "Piacenza";
+            cellaLuogo.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaFornitori = foglio.Cell(rigaCorrente, 4);
+            cellaFornitori.Value = cliente.Nome;
+            cellaFornitori.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaProgetto = foglio.Cell(rigaCorrente, 5);
+            cellaProgetto.Value = r.Progetto.Nome;
+            cellaProgetto.Style.Font.Bold = true;
+            cellaProgetto.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaAttivita = foglio.Cell(rigaCorrente, 6);
+            cellaAttivita.Value = r.Attivita?.Nome ?? string.Empty;
+            cellaAttivita.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            var cellaRiferimenti = foglio.Cell(rigaCorrente, 7);
+            cellaRiferimenti.Value = string.Empty;
+            cellaRiferimenti.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            totaleOre += r.Ore;
+            rigaCorrente++;
+        }
+
+        var rigaTotale = rigaCorrente;
+        var etichettaTotale = foglio.Cell(rigaTotale, 1);
+        etichettaTotale.Value = "Totale";
+        etichettaTotale.Style.Font.Bold = true;
+
+        var cellaTotaleOre = foglio.Cell(rigaTotale, 2);
+        cellaTotaleOre.Value = totaleOre;
+        cellaTotaleOre.Style.Font.Bold = true;
+
+        foglio.Column(1).Width = 14;
+        foglio.Column(2).Width = 8;
+        foglio.Column(3).Width = 12;
+        foglio.Column(4).Width = 20;
+        foglio.Column(5).Width = 40;
+        foglio.Column(6).Width = 60;
+        foglio.Column(7).Width = 20;
+        foglio.SheetView.FreezeRows(1);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        string periodo;
+        if (annoIntero)
+        {
+            periodo = anno.ToString(CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            var cultura = new CultureInfo("it-IT");
+            var nomeMese = cultura.DateTimeFormat.GetMonthName(mese).ToLower(cultura);
+            periodo = $"{nomeMese} {anno}";
+        }
+
+        var nomeFileCliente = $"{nomeCompleto} - supporto {cliente.Nome} - {periodo}.xlsx";
+
+        return File(
+            stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            nomeFileCliente);
     }
 
     public async Task<IActionResult> OnPostSalvaCellaAsync([FromBody] SalvaCellaRequest request)
@@ -280,6 +667,7 @@ public class IndexModel : PageModel
     {
         public int ClienteId { get; set; }
         public string ClienteNome { get; set; } = string.Empty;
+        public string? ClienteColore { get; set; }
         public int ProgettoId { get; set; }
         public string ProgettoNome { get; set; } = string.Empty;
         public int? AttivitaId { get; set; }
@@ -291,6 +679,7 @@ public class IndexModel : PageModel
     {
         public int Id { get; set; }
         public string Nome { get; set; } = string.Empty;
+        public string? Colore { get; set; }
         public List<ProgettoDto> Progetti { get; set; } = new();
     }
 
