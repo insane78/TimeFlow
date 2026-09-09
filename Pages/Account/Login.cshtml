@@ -1,0 +1,12 @@
+@page
+@model TimeFlow.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Accedi";
+}
+
+<div class="text-center">
+    <h1 class="mb-4">Accedi a TimeFlow</h1>
+    <a class="btn btn-primary btn-lg" asp-page="./Login" asp-page-handler="Microsoft" asp-route-returnUrl="@Model.ReturnUrl">
+        Accedi con account Microsoft
+    </a>
+</div>
