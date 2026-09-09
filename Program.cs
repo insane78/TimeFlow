@@ -17,6 +17,7 @@ builder.Services.AddRazorPages(options =>
 });
 
 builder.Services.AddScoped<IEmailSender, LoggingEmailSender>();
+builder.Services.AddScoped<TimeFlow.Services.TimesheetRisoluzioneService>();
 
 builder.Services.AddDbContext<TimeFlowDbContext>(options =>
     options.UseMySql(

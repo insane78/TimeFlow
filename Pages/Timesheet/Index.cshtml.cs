@@ -13,11 +13,13 @@ public class IndexModel : PageModel
 {
     private readonly TimeFlowDbContext _dbContext;
     private readonly UserManager<Utente> _userManager;
+    private readonly TimeFlow.Services.TimesheetRisoluzioneService _risoluzioneService;
 
-    public IndexModel(TimeFlowDbContext dbContext, UserManager<Utente> userManager)
+    public IndexModel(TimeFlowDbContext dbContext, UserManager<Utente> userManager, TimeFlow.Services.TimesheetRisoluzioneService risoluzioneService)
     {
         _dbContext = dbContext;
         _userManager = userManager;
+        _risoluzioneService = risoluzioneService;
     }
 
     public int Anno { get; set; }
@@ -484,7 +486,7 @@ public class IndexModel : PageModel
     {
         var utenteId = int.Parse(_userManager.GetUserId(User)!);
 
-        var progettoId = await RisolviProgettoAsync(utenteId, request.ClienteNome, request.ProgettoNome);
+        var progettoId = await _risoluzioneService.RisolviProgettoAsync(utenteId, request.ClienteNome, request.ProgettoNome);
         if (progettoId == null)
         {
             return BadRequest(new { errore = "Cliente o progetto non validi." });
@@ -493,7 +495,7 @@ public class IndexModel : PageModel
         int? attivitaId = null;
         if (!string.IsNullOrWhiteSpace(request.AttivitaNome))
         {
-            attivitaId = await RisolviAttivitaAsync(progettoId.Value, request.AttivitaNome);
+            attivitaId = await _risoluzioneService.RisolviAttivitaAsync(progettoId.Value, request.AttivitaNome);
         }
 
         var data = new DateOnly(request.Anno, request.Mese, request.Giorno);
@@ -537,54 +539,56 @@ public class IndexModel : PageModel
         return new JsonResult(new { ok = true, progettoId, attivitaId });
     }
 
-    private async Task<int?> RisolviProgettoAsync(int utenteId, string? clienteNome, string? progettoNome)
+    public async Task<IActionResult> OnPostAggiornaRigaAsync([FromBody] AggiornaRigaRequest request)
     {
-        if (string.IsNullOrWhiteSpace(clienteNome) || string.IsNullOrWhiteSpace(progettoNome))
+        var utenteId = int.Parse(_userManager.GetUserId(User)!);
+
+        var progettoId = await _risoluzioneService.RisolviProgettoAsync(utenteId, request.ClienteNome, request.ProgettoNome);
+        if (progettoId == null)
         {
-            return null;
+            return BadRequest(new { errore = "Cliente o progetto non validi." });
         }
 
-        clienteNome = clienteNome.Trim();
-        progettoNome = progettoNome.Trim();
-
-        var cliente = await _dbContext.Clienti.FirstOrDefaultAsync(c =>
-            c.UtenteId == utenteId && c.Nome == clienteNome);
-
-        if (cliente == null)
+        int? attivitaId = null;
+        if (!string.IsNullOrWhiteSpace(request.AttivitaNome))
         {
-            cliente = new Cliente { UtenteId = utenteId, Nome = clienteNome, Attivo = true };
-            _dbContext.Clienti.Add(cliente);
-            await _dbContext.SaveChangesAsync();
+            attivitaId = await _risoluzioneService.RisolviAttivitaAsync(progettoId.Value, request.AttivitaNome);
         }
 
-        var progetto = await _dbContext.Progetti.FirstOrDefaultAsync(p =>
-            p.ClienteId == cliente.Id && p.Nome == progettoNome);
-
-        if (progetto == null)
+        if (progettoId.Value == request.VecchioProgettoId && attivitaId == request.VecchioAttivitaId)
         {
-            progetto = new Progetto { ClienteId = cliente.Id, Nome = progettoNome, Attivo = true };
-            _dbContext.Progetti.Add(progetto);
-            await _dbContext.SaveChangesAsync();
+            return new JsonResult(new { ok = true, progettoId, attivitaId });
         }
 
-        return progetto.Id;
-    }
+        var primoGiorno = new DateOnly(request.Anno, request.Mese, 1);
+        var ultimoGiorno = primoGiorno.AddMonths(1).AddDays(-1);
 
-    private async Task<int?> RisolviAttivitaAsync(int progettoId, string attivitaNome)
-    {
-        attivitaNome = attivitaNome.Trim();
+        var registrazioniVecchie = await _dbContext.RegistrazioniOre
+            .Where(r => r.UtenteId == utenteId && r.Data >= primoGiorno && r.Data <= ultimoGiorno &&
+                        r.ProgettoId == request.VecchioProgettoId && r.AttivitaId == request.VecchioAttivitaId)
+            .ToListAsync();
 
-        var attivita = await _dbContext.Attivita.FirstOrDefaultAsync(a =>
-            a.ProgettoId == progettoId && a.Nome == attivitaNome);
-
-        if (attivita == null)
+        foreach (var reg in registrazioniVecchie)
         {
-            attivita = new TimeFlow.Models.Attivita { ProgettoId = progettoId, Nome = attivitaNome, Attiva = true };
-            _dbContext.Attivita.Add(attivita);
-            await _dbContext.SaveChangesAsync();
+            var esistente = await _dbContext.RegistrazioniOre.FirstOrDefaultAsync(r =>
+                r.UtenteId == utenteId && r.Data == reg.Data &&
+                r.ProgettoId == progettoId.Value && r.AttivitaId == attivitaId && r.Id != reg.Id);
+
+            if (esistente != null)
+            {
+                esistente.Ore += reg.Ore;
+                _dbContext.RegistrazioniOre.Remove(reg);
+            }
+            else
+            {
+                reg.ProgettoId = progettoId.Value;
+                reg.AttivitaId = attivitaId;
+            }
         }
 
-        return attivita.Id;
+        await _dbContext.SaveChangesAsync();
+
+        return new JsonResult(new { ok = true, progettoId, attivitaId });
     }
 
     private void CalcolaGiorni()
@@ -705,5 +709,16 @@ public class IndexModel : PageModel
         public string? ProgettoNome { get; set; }
         public string? AttivitaNome { get; set; }
         public decimal? Ore { get; set; }
+    }
+
+    public class AggiornaRigaRequest
+    {
+        public int Anno { get; set; }
+        public int Mese { get; set; }
+        public string? ClienteNome { get; set; }
+        public string? ProgettoNome { get; set; }
+        public string? AttivitaNome { get; set; }
+        public int VecchioProgettoId { get; set; }
+        public int? VecchioAttivitaId { get; set; }
     }
 }

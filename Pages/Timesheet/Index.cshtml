@@ -12,9 +12,10 @@
 
 <div class="tf-timesheet-wrapper">
     <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
-        <a class="btn btn-outline-primary btn-sm" asp-page="./Index" asp-route-anno="@mesePrecedente.Year" asp-route-mese="@mesePrecedente.Month">&laquo;</a>
-        <h2 class="mb-0 text-capitalize">@Model.MeseNome @Model.Anno</h2>
-        <a class="btn btn-outline-primary btn-sm" asp-page="./Index" asp-route-anno="@meseSuccessivo.Year" asp-route-mese="@meseSuccessivo.Month">&raquo;</a>
+        <a class="btn btn-outline-primary btn-sm tf-navigazione-mese" asp-page="./Index" asp-route-anno="@mesePrecedente.Year" asp-route-mese="@mesePrecedente.Month">&laquo;</a>
+        <input type="month" id="tf-selettore-mese" class="form-control form-control-lg fw-bold text-center w-auto tf-selettore-mese"
+               value="@($"{Model.Anno:0000}-{Model.Mese:00}")" />
+        <a class="btn btn-outline-primary btn-sm tf-navigazione-mese" asp-page="./Index" asp-route-anno="@meseSuccessivo.Year" asp-route-mese="@meseSuccessivo.Month">&raquo;</a>
     </div>
 
     @Html.AntiForgeryToken()
@@ -68,9 +69,38 @@
             righe: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Righe, opzioniJson)),
             clienti: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Clienti, opzioniJson)),
             salvaCellaUrl: '@Url.Page("./Index", "SalvaCella")',
+            aggiornaRigaUrl: '@Url.Page("./Index", "AggiornaRiga")',
             esportaMeseUrl: '@Url.Page("./Index", "EsportaMese", new { anno = Model.Anno, mese = Model.Mese })',
             esportaClienteUrlBase: '@Url.Page("./Index", "EsportaCliente")'
         };
     </script>
     <script src="~/js/timesheet.js" asp-append-version="true"></script>
+    <script>
+        (function () {
+            document.querySelectorAll('.tf-navigazione-mese').forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    window.tfNavigaMese(link.href);
+                });
+            });
+            var selettore = document.getElementById('tf-selettore-mese');
+            if (!selettore) return;
+            selettore.addEventListener('mousedown', function (event) {
+                event.preventDefault();
+                if (typeof selettore.showPicker === 'function') {
+                    selettore.showPicker();
+                } else {
+                    selettore.focus();
+                }
+            });
+            selettore.addEventListener('change', function () {
+                if (!selettore.value) return;
+                var parti = selettore.value.split('-');
+                var anno = parseInt(parti[0], 10);
+                var mese = parseInt(parti[1], 10);
+                window.tfNavigaMese('@Url.Page("./Index", new { anno = (string)null, mese = (string)null })' + '/' + anno + '/' + mese);
+            });
+        })();
+    </script>
 }

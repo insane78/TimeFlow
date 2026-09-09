@@ -1,0 +1,63 @@
+@page
+@model TimeFlow.Pages.Timesheet.ImportaModel
+@{
+    ViewData["Title"] = "Importa timesheet da Excel";
+}
+
+<h1>Importa timesheet da Excel</h1>
+
+<p class="text-muted">
+    Carica il file Excel annuale (un foglio per mese, con nome nel formato MM-YYYY, es. 09-2026).
+    La colonna "Project" del file verrà usata come Cliente e la colonna "Attività" come Progetto.
+</p>
+
+@if (!string.IsNullOrEmpty(Model.MessaggioErrore))
+{
+    <div class="alert alert-danger">@Model.MessaggioErrore</div>
+}
+
+@if (Model.ImportazioneCompletata)
+{
+    <div class="alert alert-success">
+        <p class="mb-2"><strong>Importazione completata.</strong></p>
+        <ul class="mb-0">
+            @foreach (var riga in Model.RiepilogoRisultati)
+            {
+                <li>@riga</li>
+            }
+        </ul>
+    </div>
+    <a class="btn btn-primary" asp-page="./Index">Torna al Timesheet</a>
+}
+else if (Model.FogliDisponibili.Count > 0)
+{
+    <form method="post" asp-page-handler="Importa">
+        <input type="hidden" asp-for="Token" />
+        <p>Seleziona i mesi da importare:</p>
+        <div class="mb-3">
+            @foreach (var foglio in Model.FogliDisponibili)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="FogliSelezionati" value="@foglio" id="foglio-@foglio" checked />
+                    <label class="form-check-label" for="foglio-@foglio">@foglio</label>
+                </div>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary">Importa</button>
+        <a class="btn btn-secondary" asp-page="./Index">Annulla</a>
+    </form>
+}
+else
+{
+    <form method="post" asp-page-handler="Carica" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label asp-for="File" class="form-label">File Excel (.xlsx)</label>
+            <input asp-for="File" type="file" class="form-control" accept=".xlsx" />
+            <div class="form-text text-danger fw-semibold">
+                Se il tuo file è in formato .xls, convertilo prima in .xlsx (ad esempio aprendolo in Excel e salvandolo con "Salva con nome"), quindi importa il file convertito.
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Carica file</button>
+        <a class="btn btn-secondary" asp-page="./Index">Annulla</a>
+    </form>
+}

@@ -45,16 +45,26 @@ public class DeleteModel : PageModel
             return NotFound();
         }
 
-        // Le registrazioni ore hanno FK Restrict verso Progetto/Attivita: vanno rimosse esplicitamente
-        // prima di eliminare il cliente, altrimenti la cascata su Progetti/Attivita fallirebbe.
-        var progettiIds = await _dbContext.Progetti
+        // Le registrazioni ore hanno FK Restrict verso Progetto/Attivita: vanno rimosse esplicitamente,
+        // insieme ad Attivita e Progetti, prima di eliminare il cliente. Non ci si affida al cascade
+        // del database perché Progetti/Attivita non sono tracciati e l'ordine delle DELETE non è garantito.
+        var progetti = await _dbContext.Progetti
             .Where(p => p.ClienteId == cliente.Id)
-            .Select(p => p.Id)
             .ToListAsync();
 
-        var registrazioni = _dbContext.RegistrazioniOre.Where(r => progettiIds.Contains(r.ProgettoId));
-        _dbContext.RegistrazioniOre.RemoveRange(registrazioni);
+        var progettiIds = progetti.Select(p => p.Id).ToList();
 
+        var attivita = await _dbContext.Attivita
+            .Where(a => progettiIds.Contains(a.ProgettoId))
+            .ToListAsync();
+
+        var registrazioni = await _dbContext.RegistrazioniOre
+            .Where(r => progettiIds.Contains(r.ProgettoId))
+            .ToListAsync();
+
+        _dbContext.RegistrazioniOre.RemoveRange(registrazioni);
+        _dbContext.Attivita.RemoveRange(attivita);
+        _dbContext.Progetti.RemoveRange(progetti);
         _dbContext.Clienti.Remove(cliente);
         await _dbContext.SaveChangesAsync();
 

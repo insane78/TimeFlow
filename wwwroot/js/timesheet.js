@@ -115,6 +115,8 @@
 
     var righeDati = data.righe.map(function (r) {
         return {
+            progettoId: r.progettoId,
+            attivitaId: r.attivitaId,
             clienteNome: r.clienteNome,
             progettoNome: r.progettoNome,
             attivitaNome: r.attivitaNome || '',
@@ -180,14 +182,72 @@
         }
     }
 
-    function salvaCella(clienteNome, progettoNome, attivitaNome, giorno, ore) {
+    var codaSalvataggi = Promise.resolve();
+    var salvataggiInCorso = 0;
+    var erroreSalvataggio = false;
+    var statoSalvataggio = document.createElement('div');
+    statoSalvataggio.setAttribute('role', 'status');
+    statoSalvataggio.hidden = true;
+    container.parentNode.insertBefore(statoSalvataggio, container);
+
+    function accodaSalvataggio(operazione) {
+        salvataggiInCorso++;
+        statoSalvataggio.hidden = false;
+        statoSalvataggio.textContent = 'Salvataggio in corso…';
+        codaSalvataggi = codaSalvataggi.then(operazione);
+        codaSalvataggi.then(function () {
+            salvataggiInCorso--;
+            statoSalvataggio.hidden = salvataggiInCorso === 0;
+        }, function (err) {
+            salvataggiInCorso--;
+            erroreSalvataggio = true;
+            statoSalvataggio.textContent = 'Salvataggio non riuscito. Le modifiche non sono confermate: non cambiare mese. ' + err.message;
+            console.error('Errore salvataggio timesheet', err);
+        });
+    }
+
+    function leggiRisposta(r) {
+        if (!r.ok || r.redirected) {
+            throw new Error('Risposta del server non valida (' + r.status + ').');
+        }
+        return r.json().then(function (res) {
+            if (!res.ok || !res.progettoId) throw new Error('Conferma del salvataggio mancante.');
+            return res;
+        });
+    }
+
+    function aggiornaIdentita(tr, res) {
+        tr.dataset.progettoId = res.progettoId;
+        tr.dataset.attivitaId = res.attivitaId == null ? '' : res.attivitaId;
+    }
+
+    window.tfNavigaMese = async function (url) {
+        if (document.activeElement) document.activeElement.blur();
+        try {
+            var coda;
+            do {
+                coda = codaSalvataggi;
+                await coda;
+            } while (coda !== codaSalvataggi);
+            window.location.href = url;
+        } catch (_) {
+            // L'errore viene mostrato accanto alla griglia.
+        }
+    };
+
+    window.addEventListener('beforeunload', function (event) {
+        if (salvataggiInCorso || erroreSalvataggio) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+
+    function salvaCella(tr, clienteNome, progettoNome, attivitaNome, giorno, ore) {
         if (!clienteNome || !progettoNome) {
-            return;
+            throw new Error('Specificare cliente e progetto.');
         }
 
-        censisciLocalmente(clienteNome, progettoNome, attivitaNome);
-
-        fetch(data.salvaCellaUrl, {
+        return fetch(data.salvaCellaUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -202,18 +262,44 @@
                 attivitaNome: attivitaNome || null,
                 ore: ore
             })
-        }).then(function (r) {
-            if (!r.ok) {
-                console.error('Errore salvataggio cella', r.status);
-            }
-        }).catch(function (err) {
-            console.error('Errore rete salvataggio cella', err);
+        }).then(leggiRisposta).then(function (res) {
+            aggiornaIdentita(tr, res);
+            censisciLocalmente(clienteNome, progettoNome, attivitaNome);
         });
     }
 
     function ottieniToken() {
         var input = document.querySelector('input[name="__RequestVerificationToken"]');
         return input ? input.value : '';
+    }
+
+    function aggiornaRiga(tr, clienteNome, progettoNome, attivitaNome) {
+        if (!tr.dataset.progettoId) {
+            return;
+        }
+        if (!clienteNome || !progettoNome) {
+            throw new Error('Specificare cliente e progetto.');
+        }
+
+        return fetch(data.aggiornaRigaUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': ottieniToken()
+            },
+            body: JSON.stringify({
+                anno: data.anno,
+                mese: data.mese,
+                clienteNome: clienteNome,
+                progettoNome: progettoNome,
+                attivitaNome: attivitaNome || null,
+                vecchioProgettoId: parseInt(tr.dataset.progettoId, 10),
+                vecchioAttivitaId: tr.dataset.attivitaId ? parseInt(tr.dataset.attivitaId, 10) : null
+            })
+        }).then(leggiRisposta).then(function (res) {
+            aggiornaIdentita(tr, res);
+            censisciLocalmente(clienteNome, progettoNome, attivitaNome);
+        });
     }
 
     function aggiornaColoreRiga(tr, colore) {
@@ -227,6 +313,8 @@
 
     function aggiungiRiga(riga) {
         var tr = document.createElement('tr');
+        tr.dataset.progettoId = riga.progettoId || '';
+        tr.dataset.attivitaId = riga.attivitaId === null || riga.attivitaId === undefined ? '' : riga.attivitaId;
 
         var progIdList = 'tf-progetti-' + (contatoreDatalist++);
         var attIdList = 'tf-attivita-' + (contatoreDatalist++);
@@ -247,6 +335,16 @@
         tr.appendChild(celProgetto.td);
         tr.appendChild(celAttivita.td);
 
+        function salvaIntestazione() {
+            var clienteNome = celClienti.input.value.trim();
+            var progettoNome = celProgetto.input.value.trim();
+            var attivitaNome = celAttivita.input.value.trim();
+            if (!clienteNome || !progettoNome) return;
+            accodaSalvataggio(function () {
+                return aggiornaRiga(tr, clienteNome, progettoNome, attivitaNome);
+            });
+        }
+
         celClienti.input.addEventListener('change', function () {
             var cliente = trovaCliente(celClienti.input.value.trim());
             aggiornaDatalist(progIdList, cliente ? cliente.progetti.map(function (p) { return p.nome; }) : []);
@@ -260,7 +358,11 @@
             var cliente = trovaCliente(celClienti.input.value.trim());
             var progetto = trovaProgetto(cliente, celProgetto.input.value.trim());
             aggiornaDatalist(attIdList, progetto ? progetto.attivita.map(function (a) { return a.nome; }) : []);
+
+            salvaIntestazione();
         });
+
+        celAttivita.input.addEventListener('change', salvaIntestazione);
 
         data.giorni.forEach(function (g, indice) {
             var classi = 'tf-day-cell';
@@ -284,7 +386,9 @@
                     return;
                 }
 
-                salvaCella(clienteNome, progettoNome, attivitaNome, indice + 1, ore);
+                accodaSalvataggio(function () {
+                    return salvaCella(tr, clienteNome, progettoNome, attivitaNome, indice + 1, ore);
+                });
             });
         });
 
@@ -321,6 +425,13 @@
         var totaleGeneraleEl = tfoot.querySelector('.tf-totale-generale');
         if (totaleGeneraleEl) {
             totaleGeneraleEl.textContent = totaleGenerale > 0 ? totaleGenerale.toString().replace('.', ',') : '';
+        }
+
+        var giorniEl = tfoot.querySelector('.tf-footer-giorni');
+        if (giorniEl) {
+            var giornate = totaleGenerale / 8;
+            giornate = Math.round(giornate * 1000) / 1000;
+            giorniEl.textContent = 'Giorni: ' + giornate.toString().replace('.', ',');
         }
     }
 
@@ -363,7 +474,12 @@
 
         var tdEtichettaTotale = document.createElement('td');
         tdEtichettaTotale.className = 'tf-footer-etichetta text-end';
-        tdEtichettaTotale.textContent = 'Totale';
+
+        var spanGiorni = document.createElement('span');
+        spanGiorni.className = 'tf-footer-giorni';
+        spanGiorni.textContent = 'Giorni: 0';
+        tdEtichettaTotale.appendChild(spanGiorni);
+        tdEtichettaTotale.appendChild(document.createTextNode('Totale'));
         tr.appendChild(tdEtichettaTotale);
 
         data.giorni.forEach(function () {

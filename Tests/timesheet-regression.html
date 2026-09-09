@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<title>Regressione salvataggio timesheet</title>
+<pre id="risultati">RUNNING</pre>
+<script>
+(async function () {
+    const risultati = document.getElementById('risultati');
+    const esiti = [];
+    function verifica(condizione, messaggio) {
+        if (!condizione) throw new Error(messaggio);
+    }
+    async function prepara(attivitaId = null) {
+        const frame = document.createElement('iframe');
+        document.body.appendChild(frame);
+        const w = frame.contentWindow;
+        const d = w.document;
+        d.body.innerHTML = '<div><div id="timesheet-grid"></div></div>';
+        w.tfTimesheetData = {
+            anno: 2026, mese: 1, giorniNelMese: 1,
+            giorni: [{ giorno: 1, nomeGiornoBreve: 'gio' }],
+            righe: [{ progettoId: 10, attivitaId, clienteNome: 'MASER', progettoNome: 'Vecchio', attivitaNome: attivitaId ? 'Precedente' : '', ore: [4] }],
+            clienti: [{ id: 1, nome: 'MASER', progetti: [
+                { id: 10, nome: 'Vecchio', attivita: [] },
+                { id: 20, nome: 'Esistente', attivita: [] }
+            ] }],
+            salvaCellaUrl: '/SalvaCella', aggiornaRigaUrl: '/AggiornaRiga'
+        };
+        const richieste = [];
+        let progettoPersistito = 10;
+        let attivitaPersistita = attivitaId;
+        w.fetch = async function (url, opzioni) {
+            const body = JSON.parse(opzioni.body);
+            richieste.push({ url, body });
+            await new Promise(resolve => setTimeout(resolve, 25));
+            if (url === '/AggiornaRiga') {
+                verifica(body.vecchioProgettoId === progettoPersistito, 'ID progetto obsoleto');
+                verifica(body.vecchioAttivitaId === attivitaPersistita, 'ID attività obsoleto');
+            }
+            progettoPersistito = body.progettoNome === 'Esistente' ? 20 : 10;
+            attivitaPersistita = body.attivitaNome === 'Nuova' ? 30 : body.attivitaNome ? attivitaId : null;
+            return { ok: true, status: 200, json: async () => ({ ok: true, progettoId: progettoPersistito, attivitaId: attivitaPersistita }) };
+        };
+        const script = d.createElement('script');
+        script.src = new URL('../wwwroot/js/timesheet.js', location.href).href;
+        await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            d.body.appendChild(script);
+        });
+        function cambia(input, valore) {
+            input.value = valore;
+            input.dispatchEvent(new w.Event('change'));
+        }
+        return { w, d, frame, richieste, cambia };
+    }
+    try {
+        for (const attivitaId of [null, 15]) {
+            const t = await prepara(attivitaId);
+            const riga = t.d.querySelector('tbody tr');
+            const input = riga.querySelectorAll('input');
+            verifica(riga.dataset.progettoId === '10', 'ID perso nel mapping');
+            t.cambia(input[1], 'Esistente');
+            t.cambia(input[2], 'Nuova');
+            const navigazione = t.w.tfNavigaMese('#mese-successivo');
+            verifica(t.w.location.hash === '', 'Navigazione prima del salvataggio');
+            await navigazione;
+            verifica(t.richieste.length === 2, 'Aggiornamenti non inviati');
+            verifica(t.richieste[1].body.vecchioProgettoId === 20, 'Secondo edit non usa il nuovo progetto');
+            verifica(riga.dataset.attivitaId === '30', 'Nuova attività non confermata');
+            await new Promise(resolve => setTimeout(resolve, 50));
+            verifica(t.w.location.hash === '#mese-successivo', 'Navigazione non completata');
+            verifica(input[3].value === '4', 'Ore alterate');
+            esiti.push('PASS: progetto esistente + nuova attività + navigazione immediata, attività iniziale ' + attivitaId);
+            t.frame.remove();
+        }
+        {
+            const t = await prepara();
+            const riga = t.d.querySelectorAll('tbody tr')[1];
+            const input = riga.querySelectorAll('input');
+            t.cambia(input[0], 'MASER');
+            t.cambia(input[1], 'Vecchio');
+            t.cambia(input[3], '2');
+            t.cambia(input[1], 'Esistente');
+            t.cambia(input[2], 'Nuova');
+            await t.w.tfNavigaMese('#salvato');
+            verifica(t.richieste.length === 3, 'Nuova riga non segue il primo salvataggio ore');
+            verifica(riga.dataset.progettoId === '20' && riga.dataset.attivitaId === '30', 'Identità nuova riga errata');
+            esiti.push('PASS: ore su nuova riga seguite immediatamente da progetto e attività');
+            t.frame.remove();
+        }
+        {
+            const t = await prepara();
+            t.w.fetch = async () => ({ ok: false, status: 500 });
+            t.cambia(t.d.querySelectorAll('tbody tr input')[1], 'Esistente');
+            await t.w.tfNavigaMese('#non-deve-aprirsi');
+            verifica(t.w.location.hash === '', 'Navigazione consentita dopo errore');
+            const stato = t.d.querySelector('[role="status"]');
+            verifica(!stato.hidden && stato.textContent.includes('non riuscito'), 'Errore invisibile');
+            esiti.push('PASS: errore server visibile e navigazione bloccata');
+            t.frame.remove();
+        }
+        risultati.textContent = esiti.join('\n') + '\nALL PASSED';
+    } catch (errore) {
+        risultati.textContent = esiti.join('\n') + '\nFAILED: ' + errore.stack;
+    }
+})();
+</script>
+</html>

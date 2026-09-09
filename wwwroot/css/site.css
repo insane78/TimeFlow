@@ -195,6 +195,14 @@ footer.footer {
   margin-bottom: 0;
 }
 
+.tf-selettore-mese {
+  font-size: 1.3rem;
+  max-width: 260px;
+  text-transform: capitalize;
+  cursor: pointer;
+  user-select: none;
+}
+
 #timesheet-grid {
   flex: 1 1 0;
   min-height: 0;
@@ -324,6 +332,16 @@ footer.footer {
 .tf-grid tfoot .tf-footer-etichetta {
   background-color: #dcefed;
   color: var(--tf-text);
+}
+
+.tf-footer-giorni {
+  display: inline-block;
+  margin-right: 1.25rem;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--tf-border);
+  border-radius: 0.35rem;
+  background-color: #ffffff;
+  font-weight: 600;
 }
 
 .tf-grid td.tf-totale,
