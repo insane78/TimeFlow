@@ -1,0 +1,50 @@
+@page
+@model TimeFlow.Pages.Admin.Utenti.IndexModel
+@{
+    ViewData["Title"] = "Gestione utenti";
+}
+
+<h1>Gestione utenti</h1>
+
+@if (!string.IsNullOrEmpty(Model.Messaggio))
+{
+    <div class="alert alert-info">@Model.Messaggio</div>
+}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Registrato il</th>
+            <th>Autorizzato</th>
+            <th>Admin</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var utente in Model.Utenti)
+        {
+            <tr>
+                <td>@utente.NomeCompleto</td>
+                <td>@utente.Email</td>
+                <td>@utente.DataRegistrazione.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                <td>@(utente.Autorizzato ? "Sì" : "No")</td>
+                <td>@(utente.Admin ? "Sì" : "No")</td>
+                <td class="d-flex gap-2">
+                    <form method="post" asp-page-handler="ToggleAutorizzato" asp-route-id="@utente.Id">
+                        <button type="submit" class="btn btn-sm @(utente.Autorizzato ? "btn-outline-danger" : "btn-outline-success")">
+                            @(utente.Autorizzato ? "Revoca" : "Autorizza")
+                        </button>
+                    </form>
+                    <form method="post" asp-page-handler="ToggleAdmin" asp-route-id="@utente.Id">
+                        <button type="submit" class="btn btn-sm @(utente.Admin ? "btn-outline-danger" : "btn-outline-primary")"
+                                @(utente.Id == Model.UtenteCorrenteId ? "disabled" : "")>
+                            @(utente.Admin ? "Rimuovi admin" : "Rendi admin")
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

@@ -1,0 +1,23 @@
+@page "{clienteId:int}"
+@model TimeFlow.Pages.Progetti.CreateModel
+@{
+    ViewData["Title"] = "Nuovo progetto";
+}
+
+<h1>Nuovo progetto</h1>
+
+<form method="post">
+    <input type="hidden" asp-for="Progetto.ClienteId" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Progetto.Nome" class="form-label"></label>
+        <input asp-for="Progetto.Nome" class="form-control" />
+        <span asp-validation-for="Progetto.Nome" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="Progetto.Attivo" class="form-check-input" />
+        <label asp-for="Progetto.Attivo" class="form-check-label"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a class="btn btn-secondary" asp-page="./Index" asp-route-clienteId="@Model.Progetto.ClienteId">Annulla</a>
+</form>

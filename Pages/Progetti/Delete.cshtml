@@ -1,0 +1,16 @@
+@page "{id:int}"
+@model TimeFlow.Pages.Progetti.DeleteModel
+@{
+    ViewData["Title"] = "Elimina progetto";
+}
+
+<h1>Elimina progetto</h1>
+
+<p>Sei sicuro di voler eliminare il progetto <strong>@Model.Progetto.Nome</strong>?</p>
+<p class="text-danger">Verranno eliminate anche tutte le attività e le registrazioni ore collegate.</p>
+
+<form method="post">
+    <input type="hidden" asp-for="Progetto.Id" />
+    <button type="submit" class="btn btn-danger">Elimina</button>
+    <a class="btn btn-secondary" asp-page="./Index" asp-route-clienteId="@Model.Progetto.ClienteId">Annulla</a>
+</form>

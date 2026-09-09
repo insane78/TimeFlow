@@ -1,0 +1,22 @@
+@page
+@model TimeFlow.Pages.Clienti.CreateModel
+@{
+    ViewData["Title"] = "Nuovo cliente";
+}
+
+<h1>Nuovo cliente</h1>
+
+<form method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Cliente.Nome" class="form-label"></label>
+        <input asp-for="Cliente.Nome" class="form-control" />
+        <span asp-validation-for="Cliente.Nome" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="Cliente.Attivo" class="form-check-input" />
+        <label asp-for="Cliente.Attivo" class="form-check-label"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a class="btn btn-secondary" asp-page="./Index">Annulla</a>
+</form>

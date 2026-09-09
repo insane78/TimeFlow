@@ -1,0 +1,35 @@
+@page
+@model TimeFlow.Pages.Clienti.IndexModel
+@{
+    ViewData["Title"] = "Clienti";
+}
+
+<h1>Clienti</h1>
+
+<p>
+    <a class="btn btn-primary" asp-page="./Create">Nuovo cliente</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Attivo</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var cliente in Model.Clienti)
+        {
+            <tr>
+                <td>@cliente.Nome</td>
+                <td>@(cliente.Attivo ? "Sì" : "No")</td>
+                <td>
+                    <a class="btn btn-sm btn-outline-primary" asp-page="/Progetti/Index" asp-route-clienteId="@cliente.Id">Progetti</a>
+                    <a class="btn btn-sm btn-secondary" asp-page="./Edit" asp-route-id="@cliente.Id">Modifica</a>
+                    <a class="btn btn-sm btn-danger" asp-page="./Delete" asp-route-id="@cliente.Id">Elimina</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

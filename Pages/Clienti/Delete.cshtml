@@ -1,0 +1,16 @@
+@page "{id:int}"
+@model TimeFlow.Pages.Clienti.DeleteModel
+@{
+    ViewData["Title"] = "Elimina cliente";
+}
+
+<h1>Elimina cliente</h1>
+
+<p>Confermi l'eliminazione del cliente <strong>@Model.Cliente.Nome</strong>?</p>
+<p class="text-danger">Attenzione: verranno eliminati anche tutti i progetti, le attività e le registrazioni ore collegate.</p>
+
+<form method="post">
+    <input type="hidden" asp-for="Cliente.Id" />
+    <button type="submit" class="btn btn-danger">Elimina</button>
+    <a class="btn btn-secondary" asp-page="./Index">Annulla</a>
+</form>

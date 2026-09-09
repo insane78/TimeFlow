@@ -1,3 +1,13 @@
+:root {
+  --tf-primary: #2a9d8f;
+  --tf-primary-dark: #21807a;
+  --tf-secondary: #4fc3d9;
+  --tf-bg: #eef7f7;
+  --tf-surface: #f7fbfb;
+  --tf-border: #d3e9e8;
+  --tf-text: #1f3d3b;
+}
+
 html {
   font-size: 14px;
 }
@@ -9,7 +19,7 @@ html {
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--tf-secondary);
 }
 
 html {
@@ -18,7 +28,107 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+  background-color: var(--tf-bg);
+  color: var(--tf-text);
+}
+
+header .navbar {
+  background-color: var(--tf-surface) !important;
+  border-bottom: 1px solid var(--tf-border) !important;
+}
+
+.navbar-brand {
+  color: var(--tf-primary-dark) !important;
+  font-weight: 600;
+}
+
+.navbar-nav .nav-link {
+  color: var(--tf-text) !important;
+}
+
+.navbar-nav .nav-link:hover {
+  color: var(--tf-primary-dark) !important;
+}
+
+.btn-primary {
+  background-color: var(--tf-primary);
+  border-color: var(--tf-primary);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--tf-primary-dark);
+  border-color: var(--tf-primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--tf-primary-dark);
+  border-color: var(--tf-primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--tf-primary);
+  border-color: var(--tf-primary);
+}
+
+.table {
+  background-color: var(--tf-surface);
+}
+
+.card, .table, .form-control, .form-select {
+  border-color: var(--tf-border);
+}
+
+footer.footer {
+  background-color: var(--tf-surface);
+  border-top: 1px solid var(--tf-border);
+}
+
+.btn-ms-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: #5e5e5e;
+  color: #ffffff;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0 0.9rem;
+  height: 41px;
+  border: 1px solid #8c8c8c;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.btn-ms-signin:hover {
+  background-color: #4b4b4b;
+  color: #ffffff;
+}
+
+.ms-logo {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 9px);
+  grid-template-rows: repeat(2, 9px);
+  gap: 1px;
+  width: 19px;
+  height: 19px;
+}
+
+.ms-logo span:nth-child(1) { background-color: #f25022; }
+.ms-logo span:nth-child(2) { background-color: #7fba00; }
+.ms-logo span:nth-child(3) { background-color: #00a4ef; }
+.ms-logo span:nth-child(4) { background-color: #ffb900; }
+
+.hero {
+  width: 98vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: calc(100vh - 130px);
+  background-image: url("/images/timeflow-landing-hero.webp");
+  background-size: cover;
+  background-position: center;
+  border-radius: 0.5rem;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {

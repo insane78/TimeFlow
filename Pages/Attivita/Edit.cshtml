@@ -1,0 +1,24 @@
+@page "{id:int}"
+@model TimeFlow.Pages.Attivita.EditModel
+@{
+    ViewData["Title"] = "Modifica attività";
+}
+
+<h1>Modifica attività</h1>
+
+<form method="post">
+    <input type="hidden" asp-for="Attivita.Id" />
+    <input type="hidden" asp-for="Attivita.ProgettoId" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Attivita.Nome" class="form-label"></label>
+        <input asp-for="Attivita.Nome" class="form-control" />
+        <span asp-validation-for="Attivita.Nome" class="text-danger"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="Attivita.Attiva" class="form-check-input" />
+        <label asp-for="Attivita.Attiva" class="form-check-label"></label>
+    </div>
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a class="btn btn-secondary" asp-page="./Index" asp-route-progettoId="@Model.Attivita.ProgettoId">Annulla</a>
+</form>
