@@ -59,5 +59,9 @@ public class TimeFlowDbContext : IdentityUserContext<Utente, int>
         builder.Entity<RegistrazioneOre>()
             .Property(r => r.Ore)
             .HasPrecision(5, 2);
+
+        builder.Entity<RegistrazioneOre>()
+            .HasIndex(r => new { r.UtenteId, r.Data, r.ProgettoId, r.AttivitaId })
+            .IsUnique();
     }
 }

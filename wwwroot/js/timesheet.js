@@ -1,0 +1,396 @@
+(function () {
+    'use strict';
+
+    var data = window.tfTimesheetData;
+    if (!data) {
+        return;
+    }
+
+    var container = document.getElementById('timesheet-grid');
+    var datalistId = 'tf-clienti-list';
+
+    function testoSicuro(v) {
+        return v === null || v === undefined ? '' : String(v);
+    }
+
+    function formattaOre(v) {
+        if (v === null || v === undefined || v === '') return '';
+        return v.toString().replace('.', ',');
+    }
+
+    function trovaCliente(nome) {
+        return data.clienti.find(function (c) { return c.nome === nome; });
+    }
+
+    function trovaProgetto(cliente, nome) {
+        if (!cliente) return null;
+        return cliente.progetti.find(function (p) { return p.nome === nome; }) || null;
+    }
+
+    function costruisciDatalist(id, valori) {
+        var dl = document.createElement('datalist');
+        dl.id = id;
+        valori.forEach(function (v) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            dl.appendChild(opt);
+        });
+        return dl;
+    }
+
+    function aggiornaDatalist(id, valori) {
+        var dl = document.getElementById(id);
+        if (!dl) return;
+        dl.innerHTML = '';
+        valori.forEach(function (v) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            dl.appendChild(opt);
+        });
+    }
+
+    // Datalist globale clienti
+    var dlClienti = costruisciDatalist(datalistId, data.clienti.map(function (c) { return c.nome; }));
+    document.body.appendChild(dlClienti);
+
+    var table = document.createElement('table');
+    table.className = 'tf-grid table table-bordered table-sm';
+    table.style.minWidth = (445 + data.giorniNelMese * 34) + 'px';
+
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+
+    function aggiungiHeaderCell(testo, classi) {
+        var th = document.createElement('th');
+        th.textContent = testo;
+        if (classi) th.className = classi;
+        headRow.appendChild(th);
+        return th;
+    }
+
+    function aggiungiHeaderGiorno(g) {
+        var th = document.createElement('th');
+        var classi = 'tf-day';
+        if (g.festivo) classi += ' tf-festivo';
+        else if (g.weekend) classi += ' tf-weekend';
+        th.className = classi;
+
+        var nome = document.createElement('span');
+        nome.className = 'tf-day-nome';
+        nome.textContent = g.nomeGiornoBreve;
+
+        var numero = document.createElement('span');
+        numero.className = 'tf-day-numero';
+        numero.textContent = g.giorno;
+
+        th.appendChild(nome);
+        th.appendChild(numero);
+        headRow.appendChild(th);
+        return th;
+    }
+
+    aggiungiHeaderCell('Cliente');
+    aggiungiHeaderCell('Progetto');
+    aggiungiHeaderCell('Attività');
+
+    data.giorni.forEach(function (g) {
+        aggiungiHeaderGiorno(g);
+    });
+
+    aggiungiHeaderCell('Totale', 'tf-totale-col');
+
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var RIGHE_VISIBILI = 15;
+
+    var tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+
+    var tfoot = document.createElement('tfoot');
+    table.appendChild(tfoot);
+
+    container.innerHTML = '';
+    container.appendChild(table);
+
+    var righeDati = data.righe.map(function (r) {
+        return {
+            clienteNome: r.clienteNome,
+            progettoNome: r.progettoNome,
+            attivitaNome: r.attivitaNome || '',
+            ore: r.ore.slice()
+        };
+    });
+
+    var contatoreDatalist = 0;
+
+    function creaCellaTesto(valore, opzioni) {
+        var td = document.createElement('td');
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'form-control form-control-sm';
+        input.value = testoSicuro(valore);
+        if (opzioni && opzioni.datalistId) {
+            input.setAttribute('list', opzioni.datalistId);
+        }
+        td.appendChild(input);
+        return { td: td, input: input };
+    }
+
+    function creaCellaOre(valore, classi) {
+        var td = document.createElement('td');
+        if (classi) td.className = classi;
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.className = 'form-control form-control-sm tf-ore';
+        input.value = formattaOre(valore);
+        td.appendChild(input);
+        return { td: td, input: input };
+    }
+
+    function calcolaTotaleRiga(rigaEl) {
+        var input = rigaEl.querySelectorAll('.tf-ore');
+        var totale = 0;
+        input.forEach(function (inp) {
+            var v = parseFloat((inp.value || '').replace(',', '.'));
+            if (!isNaN(v)) totale += v;
+        });
+        var totaleEl = rigaEl.querySelector('.tf-totale');
+        totaleEl.textContent = totale > 0 ? totale.toString().replace('.', ',') : '';
+        calcolaTotaliColonne();
+    }
+
+    function censisciLocalmente(clienteNome, progettoNome, attivitaNome) {
+        var cliente = trovaCliente(clienteNome);
+        if (!cliente) {
+            cliente = { nome: clienteNome, progetti: [] };
+            data.clienti.push(cliente);
+            aggiornaDatalist(datalistId, data.clienti.map(function (c) { return c.nome; }));
+        }
+
+        var progetto = trovaProgetto(cliente, progettoNome);
+        if (!progetto) {
+            progetto = { nome: progettoNome, attivita: [] };
+            cliente.progetti.push(progetto);
+        }
+
+        if (attivitaNome && !progetto.attivita.some(function (a) { return a.nome === attivitaNome; })) {
+            progetto.attivita.push({ nome: attivitaNome });
+        }
+    }
+
+    function salvaCella(clienteNome, progettoNome, attivitaNome, giorno, ore) {
+        if (!clienteNome || !progettoNome) {
+            return;
+        }
+
+        censisciLocalmente(clienteNome, progettoNome, attivitaNome);
+
+        fetch(data.salvaCellaUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': ottieniToken()
+            },
+            body: JSON.stringify({
+                anno: data.anno,
+                mese: data.mese,
+                giorno: giorno,
+                clienteNome: clienteNome,
+                progettoNome: progettoNome,
+                attivitaNome: attivitaNome || null,
+                ore: ore
+            })
+        }).then(function (r) {
+            if (!r.ok) {
+                console.error('Errore salvataggio cella', r.status);
+            }
+        }).catch(function (err) {
+            console.error('Errore rete salvataggio cella', err);
+        });
+    }
+
+    function ottieniToken() {
+        var input = document.querySelector('input[name="__RequestVerificationToken"]');
+        return input ? input.value : '';
+    }
+
+    function aggiungiRiga(riga) {
+        var tr = document.createElement('tr');
+
+        var progIdList = 'tf-progetti-' + (contatoreDatalist++);
+        var attIdList = 'tf-attivita-' + (contatoreDatalist++);
+
+        var celClienti = creaCellaTesto(riga.clienteNome, { datalistId: datalistId });
+        var celProgetto = creaCellaTesto(riga.progettoNome, { datalistId: progIdList });
+        var celAttivita = creaCellaTesto(riga.attivitaNome, { datalistId: attIdList });
+
+        var clienteIniziale = trovaCliente(riga.clienteNome);
+        var progettoIniziale = trovaProgetto(clienteIniziale, riga.progettoNome);
+
+        var dlProg = costruisciDatalist(progIdList, clienteIniziale ? clienteIniziale.progetti.map(function (p) { return p.nome; }) : []);
+        var dlAtt = costruisciDatalist(attIdList, progettoIniziale ? progettoIniziale.attivita.map(function (a) { return a.nome; }) : []);
+        document.body.appendChild(dlProg);
+        document.body.appendChild(dlAtt);
+
+        tr.appendChild(celClienti.td);
+        tr.appendChild(celProgetto.td);
+        tr.appendChild(celAttivita.td);
+
+        celClienti.input.addEventListener('change', function () {
+            var cliente = trovaCliente(celClienti.input.value.trim());
+            aggiornaDatalist(progIdList, cliente ? cliente.progetti.map(function (p) { return p.nome; }) : []);
+            celProgetto.input.value = '';
+            celAttivita.input.value = '';
+            aggiornaDatalist(attIdList, []);
+        });
+
+        celProgetto.input.addEventListener('change', function () {
+            var cliente = trovaCliente(celClienti.input.value.trim());
+            var progetto = trovaProgetto(cliente, celProgetto.input.value.trim());
+            aggiornaDatalist(attIdList, progetto ? progetto.attivita.map(function (a) { return a.nome; }) : []);
+        });
+
+        data.giorni.forEach(function (g, indice) {
+            var classi = 'tf-day-cell';
+            if (g.festivo) classi += ' tf-festivo';
+            else if (g.weekend) classi += ' tf-weekend';
+
+            var cellaOre = creaCellaOre(riga.ore[indice], classi);
+            tr.appendChild(cellaOre.td);
+
+            cellaOre.input.addEventListener('change', function () {
+                calcolaTotaleRiga(tr);
+
+                var clienteNome = celClienti.input.value.trim();
+                var progettoNome = celProgetto.input.value.trim();
+                var attivitaNome = celAttivita.input.value.trim();
+                var valoreGrezzo = cellaOre.input.value.trim();
+                var ore = valoreGrezzo ? parseFloat(valoreGrezzo.replace(',', '.')) : null;
+
+                if (ore !== null && isNaN(ore)) {
+                    cellaOre.input.value = '';
+                    return;
+                }
+
+                salvaCella(clienteNome, progettoNome, attivitaNome, indice + 1, ore);
+            });
+        });
+
+        var totaleTd = document.createElement('td');
+        totaleTd.className = 'tf-totale text-center';
+        tr.appendChild(totaleTd);
+
+        tbody.appendChild(tr);
+        calcolaTotaleRiga(tr);
+    }
+
+    function calcolaTotaliColonne() {
+        var totaliGiorni = new Array(data.giorniNelMese).fill(0);
+        var totaleGenerale = 0;
+
+        tbody.querySelectorAll('tr').forEach(function (tr) {
+            var inputOre = tr.querySelectorAll('.tf-ore');
+            inputOre.forEach(function (inp, indice) {
+                var v = parseFloat((inp.value || '').replace(',', '.'));
+                if (!isNaN(v)) {
+                    totaliGiorni[indice] += v;
+                    totaleGenerale += v;
+                }
+            });
+        });
+
+        var celleTotale = tfoot.querySelectorAll('.tf-totale-colonna');
+        celleTotale.forEach(function (td, indice) {
+            var v = totaliGiorni[indice];
+            td.textContent = v > 0 ? v.toString().replace('.', ',') : '';
+        });
+
+        var totaleGeneraleEl = tfoot.querySelector('.tf-totale-generale');
+        if (totaleGeneraleEl) {
+            totaleGeneraleEl.textContent = totaleGenerale > 0 ? totaleGenerale.toString().replace('.', ',') : '';
+        }
+    }
+
+    function costruisciFooter() {
+        var tr = document.createElement('tr');
+        tr.className = 'tf-footer-riga';
+
+        var tdComandi = document.createElement('td');
+        tdComandi.colSpan = 2;
+        tdComandi.className = 'tf-footer-comandi';
+
+        var btnAggiungi = document.createElement('button');
+        btnAggiungi.type = 'button';
+        btnAggiungi.className = 'btn btn-sm btn-outline-primary me-1';
+        btnAggiungi.textContent = 'Aggiungi riga';
+        btnAggiungi.addEventListener('click', function () {
+            aggiungiRiga(rigaVuota());
+        });
+
+        var btnEsportaMese = document.createElement('button');
+        btnEsportaMese.type = 'button';
+        btnEsportaMese.className = 'btn btn-sm btn-outline-secondary me-1';
+        btnEsportaMese.textContent = 'Esporta mese';
+        btnEsportaMese.addEventListener('click', function () {
+            // TODO: implementare esportazione mese
+        });
+
+        var btnEsportaCliente = document.createElement('button');
+        btnEsportaCliente.type = 'button';
+        btnEsportaCliente.className = 'btn btn-sm btn-outline-secondary';
+        btnEsportaCliente.textContent = 'Esporta per cliente';
+        btnEsportaCliente.addEventListener('click', function () {
+            // TODO: implementare esportazione per cliente
+        });
+
+        tdComandi.appendChild(btnAggiungi);
+        tdComandi.appendChild(btnEsportaMese);
+        tdComandi.appendChild(btnEsportaCliente);
+        tr.appendChild(tdComandi);
+
+        var tdEtichettaTotale = document.createElement('td');
+        tdEtichettaTotale.className = 'tf-footer-etichetta text-end';
+        tdEtichettaTotale.textContent = 'Totale';
+        tr.appendChild(tdEtichettaTotale);
+
+        data.giorni.forEach(function () {
+            var td = document.createElement('td');
+            td.className = 'tf-totale-colonna text-center';
+            tr.appendChild(td);
+        });
+
+        var tdTotaleGenerale = document.createElement('td');
+        tdTotaleGenerale.className = 'tf-totale-generale text-center';
+        tr.appendChild(tdTotaleGenerale);
+
+        tfoot.appendChild(tr);
+    }
+
+    function rigaVuota() {
+        return {
+            clienteNome: '',
+            progettoNome: '',
+            attivitaNome: '',
+            ore: new Array(data.giorniNelMese).fill(null)
+        };
+    }
+
+    function riempiSpazioDisponibile() {
+        while (tbody.rows.length < RIGHE_VISIBILI) {
+            aggiungiRiga(rigaVuota());
+        }
+    }
+
+    righeDati.forEach(aggiungiRiga);
+    riempiSpazioDisponibile();
+    costruisciFooter();
+    calcolaTotaliColonne();
+
+    tbody.addEventListener('input', function (event) {
+        if (event.target.closest('tr') === tbody.lastElementChild && tbody.rows.length < RIGHE_VISIBILI) {
+            aggiungiRiga(rigaVuota());
+        }
+    });
+})();

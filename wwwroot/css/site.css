@@ -139,3 +139,196 @@ footer.footer {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+
+/* Timesheet grid */
+.tf-full-page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tf-full-page > header {
+  flex: 0 0 auto;
+}
+
+.tf-page-content,
+.tf-page-main,
+.tf-timesheet-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tf-page-content {
+  padding: 0 1rem 0.5rem;
+}
+
+.tf-timesheet-wrapper {
+  width: 100%;
+}
+
+.tf-timesheet-wrapper > :not(#timesheet-grid) {
+  flex: 0 0 auto;
+}
+
+.tf-timesheet-wrapper > p {
+  margin-bottom: 0;
+}
+
+#timesheet-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--tf-border);
+  background: var(--tf-surface);
+}
+
+.tf-grid {
+  width: 100%;
+  table-layout: fixed;
+  font-size: 0.8rem;
+  margin-bottom: 0;
+}
+
+.tf-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  height: 36px;
+  white-space: normal;
+  line-height: 1.1;
+  background: #dcefed;
+}
+
+.tf-grid th.tf-day {
+  padding: 0;
+}
+
+.tf-grid th.tf-day .tf-day-nome {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tf-grid th.tf-day .tf-day-numero {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.tf-grid tbody tr {
+  height: 32px;
+}
+
+.tf-grid th,
+.tf-grid td {
+  vertical-align: middle;
+  padding: 2px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tf-grid thead th:nth-child(1),
+.tf-grid thead th:nth-child(2),
+.tf-grid thead th:nth-child(3) {
+  width: 260px;
+  text-align: left;
+  background-color: #52697a;
+  color: #f8f9fa;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+}
+
+.tf-grid tbody td:nth-child(1),
+.tf-grid tbody td:nth-child(2),
+.tf-grid tbody td:nth-child(3) {
+  width: 260px;
+  text-align: left;
+}
+
+.tf-grid td:nth-child(1) input,
+.tf-grid td:nth-child(2) input {
+  font-weight: 700;
+}
+
+.tf-grid th.tf-totale-col,
+.tf-grid td.tf-totale {
+  width: 55px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tf-grid .tf-ore {
+  text-align: center;
+  padding: 0.1rem 0;
+}
+
+.tf-grid th.tf-weekend,
+.tf-grid td.tf-weekend {
+  background-color: #d6e9fb;
+  border: 1px solid #a9c6dd;
+}
+
+.tf-grid tfoot .tf-footer-riga {
+  height: 40px;
+}
+
+.tf-grid tfoot td {
+  font-weight: 700;
+}
+
+.tf-grid tfoot .tf-footer-comandi {
+  text-align: left;
+  white-space: normal;
+  background-color: var(--tf-surface);
+}
+
+.tf-grid tfoot .tf-footer-etichetta {
+  background-color: #dcefed;
+  color: var(--tf-text);
+}
+
+.tf-grid td.tf-totale,
+.tf-grid tfoot .tf-totale-colonna,
+.tf-grid tfoot .tf-totale-generale {
+  background-color: #52697a;
+  color: #f8f9fa;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid #7d95a6;
+}
+
+.tf-grid tfoot .tf-footer-comandi .btn {
+  white-space: nowrap;
+}
+
+.tf-grid th.tf-festivo,
+.tf-grid td.tf-festivo {
+  background-color: #fde2e2 !important;
+}
+
+.tf-grid input.form-control-sm {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.35rem;
+  width: 100%;
+  min-width: 0;
+  height: 27px;
+  min-height: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.tf-grid input.form-control-sm:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: -2px;
+  box-shadow: none;
+}

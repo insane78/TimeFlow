@@ -2,6 +2,7 @@
 @using TimeFlow.Models
 @inject UserManager<Utente> UserManager
 @{
+    var fullPage = ViewData["FullPage"] is true;
     var isAdmin = false;
     if (User.Identity != null && User.Identity.IsAuthenticated)
     {
@@ -20,8 +21,9 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/TimeFlow.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body class="@(fullPage ? "tf-full-page" : null)">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
@@ -39,6 +41,9 @@
                         </li>
                         @if (User.Identity != null && User.Identity.IsAuthenticated)
                         {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-area="" asp-page="/Timesheet/Index">Timesheet</a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" asp-area="" asp-page="/Clienti/Index">Clienti</a>
                             </li>
@@ -76,8 +81,8 @@
             </div>
         </nav>
     </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+    <div class="@(fullPage ? "container-fluid tf-page-content" : "container")">
+        <main role="main" class="@(fullPage ? "tf-page-main" : "pb-3")">
             @RenderBody()
         </main>
     </div>

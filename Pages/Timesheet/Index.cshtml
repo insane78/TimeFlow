@@ -1,0 +1,42 @@
+@page "{anno:int?}/{mese:int?}"
+@model TimeFlow.Pages.Timesheet.IndexModel
+@{
+    ViewData["Title"] = "Timesheet";
+    ViewData["FullPage"] = true;
+}
+
+@{
+    var mesePrecedente = new DateOnly(Model.Anno, Model.Mese, 1).AddMonths(-1);
+    var meseSuccessivo = new DateOnly(Model.Anno, Model.Mese, 1).AddMonths(1);
+}
+
+<div class="tf-timesheet-wrapper">
+    <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+        <a class="btn btn-outline-primary btn-sm" asp-page="./Index" asp-route-anno="@mesePrecedente.Year" asp-route-mese="@mesePrecedente.Month">&laquo;</a>
+        <h2 class="mb-0 text-capitalize">@Model.MeseNome @Model.Anno</h2>
+        <a class="btn btn-outline-primary btn-sm" asp-page="./Index" asp-route-anno="@meseSuccessivo.Year" asp-route-mese="@meseSuccessivo.Month">&raquo;</a>
+    </div>
+
+    @Html.AntiForgeryToken()
+
+    <div id="timesheet-grid"></div>
+</div>
+
+@{
+    var opzioniJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
+}
+
+@section Scripts {
+    <script>
+        window.tfTimesheetData = {
+            anno: @Model.Anno,
+            mese: @Model.Mese,
+            giorniNelMese: @Model.GiorniNelMese,
+            giorni: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Giorni, opzioniJson)),
+            righe: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Righe, opzioniJson)),
+            clienti: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Clienti, opzioniJson)),
+            salvaCellaUrl: '@Url.Page("./Index", "SalvaCella")'
+        };
+    </script>
+    <script src="~/js/timesheet.js" asp-append-version="true"></script>
+}
