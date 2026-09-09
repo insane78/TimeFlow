@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TimeFlow.Data;
@@ -6,6 +7,15 @@ using TimeFlow.Models;
 using TimeFlow.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Il reverse proxy gira in locale sullo stesso server: svuota gli elenchi,
+    // altrimenti ASP.NET Core ignora gli header se il proxy non è "conosciuto".
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 builder.Services.AddRazorPages(options =>
@@ -62,6 +72,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+
+app.UseForwardedHeaders();
 
 app.UseAuthentication();
 app.UseAuthorization();
