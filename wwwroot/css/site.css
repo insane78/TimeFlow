@@ -332,16 +332,49 @@ footer.footer {
 .tf-grid tfoot .tf-footer-etichetta {
   background-color: #dcefed;
   color: var(--tf-text);
+  padding: 0;
 }
 
-.tf-footer-giorni {
-  display: inline-block;
-  margin-right: 1.25rem;
-  padding: 0.15rem 0.6rem;
-  border: 1px solid var(--tf-border);
-  border-radius: 0.35rem;
+.tf-footer-mini {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+}
+
+.tf-footer-mini td {
+  border: none;
+  padding: 0.1rem 0.15rem;
+  font-size: 0.95rem;
+}
+
+.tf-grid tfoot .tf-footer-mini-label {
+  text-align: right;
   background-color: #ffffff;
   font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0.2rem;
+}
+
+.tf-grid tfoot .tf-footer-mini-value {
+  text-align: left;
+  background-color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 1%;
+  padding-left: 0.15rem;
+}
+
+.tf-grid tfoot .tf-footer-importo-valore {
+  color: #1b5e3a;
+}
+
+.tf-grid tfoot .tf-footer-mini-totale {
+  text-align: right;
+  background-color: transparent;
+  font-weight: 700;
+  vertical-align: middle;
+  width: 100%;
+  padding-right: 0.75rem;
 }
 
 .tf-grid td.tf-totale,
@@ -361,6 +394,11 @@ footer.footer {
 .tf-grid th.tf-festivo,
 .tf-grid td.tf-festivo {
   background-color: #fde2e2 !important;
+}
+
+.tf-grid th.tf-oggi,
+.tf-grid td.tf-oggi {
+  background-color: #fff3b0 !important;
 }
 
 .tf-grid input.form-control-sm {

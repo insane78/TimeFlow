@@ -65,6 +65,13 @@ builder.Services.AddAuthentication(options =>
 
 var app = builder.Build();
 
+// Applica automaticamente le migrazioni EF Core pendenti all'avvio.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<TimeFlowDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

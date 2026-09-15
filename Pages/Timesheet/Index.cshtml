@@ -65,6 +65,7 @@
             anno: @Model.Anno,
             mese: @Model.Mese,
             giorniNelMese: @Model.GiorniNelMese,
+            compensoGiornaliero: @(Model.CompensoGiornaliero.HasValue ? Model.CompensoGiornaliero.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null"),
             giorni: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Giorni, opzioniJson)),
             righe: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Righe, opzioniJson)),
             clienti: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Clienti, opzioniJson)),

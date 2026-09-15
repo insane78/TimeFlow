@@ -73,6 +73,7 @@
         var classi = 'tf-day';
         if (g.festivo) classi += ' tf-festivo';
         else if (g.weekend) classi += ' tf-weekend';
+        if (g.oggi) classi += ' tf-oggi';
         th.className = classi;
 
         var nome = document.createElement('span');
@@ -368,6 +369,7 @@
             var classi = 'tf-day-cell';
             if (g.festivo) classi += ' tf-festivo';
             else if (g.weekend) classi += ' tf-weekend';
+            if (g.oggi) classi += ' tf-oggi';
 
             var cellaOre = creaCellaOre(riga.ore[indice], classi);
             tr.appendChild(cellaOre.td);
@@ -427,11 +429,21 @@
             totaleGeneraleEl.textContent = totaleGenerale > 0 ? totaleGenerale.toString().replace('.', ',') : '';
         }
 
-        var giorniEl = tfoot.querySelector('.tf-footer-giorni');
-        if (giorniEl) {
+        var giorniValoreEl = tfoot.querySelector('.tf-footer-giorni-valore');
+        if (giorniValoreEl) {
             var giornate = totaleGenerale / 8;
             giornate = Math.round(giornate * 1000) / 1000;
-            giorniEl.textContent = 'Giorni: ' + giornate.toString().replace('.', ',');
+            giorniValoreEl.textContent = giornate.toString().replace('.', ',');
+
+            var importoValoreEl = tfoot.querySelector('.tf-footer-importo-valore');
+            if (importoValoreEl) {
+                if (typeof data.compensoGiornaliero === 'number') {
+                    var importo = Math.round(giornate * data.compensoGiornaliero * 100) / 100;
+                    importoValoreEl.textContent = importo.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '€';
+                } else {
+                    importoValoreEl.textContent = '';
+                }
+            }
         }
     }
 
@@ -473,13 +485,45 @@
         tr.appendChild(tdComandi);
 
         var tdEtichettaTotale = document.createElement('td');
-        tdEtichettaTotale.className = 'tf-footer-etichetta text-end';
+        tdEtichettaTotale.className = 'tf-footer-etichetta';
 
-        var spanGiorni = document.createElement('span');
-        spanGiorni.className = 'tf-footer-giorni';
-        spanGiorni.textContent = 'Giorni: 0';
-        tdEtichettaTotale.appendChild(spanGiorni);
-        tdEtichettaTotale.appendChild(document.createTextNode('Totale'));
+        var miniTable = document.createElement('table');
+        miniTable.className = 'tf-footer-mini';
+
+        var rigaGiorni = document.createElement('tr');
+        var labelGiorni = document.createElement('td');
+        labelGiorni.className = 'tf-footer-mini-label';
+        labelGiorni.textContent = 'Giorni:';
+        var valoreGiorni = document.createElement('td');
+        valoreGiorni.className = 'tf-footer-mini-value tf-footer-giorni-valore';
+        valoreGiorni.textContent = '0';
+        var mostraImporto = typeof data.compensoGiornaliero === 'number';
+
+        var celTotale = document.createElement('td');
+        celTotale.className = 'tf-footer-mini-totale';
+        celTotale.rowSpan = mostraImporto ? 2 : 1;
+        celTotale.textContent = 'Totale';
+        rigaGiorni.appendChild(labelGiorni);
+        rigaGiorni.appendChild(valoreGiorni);
+        rigaGiorni.appendChild(celTotale);
+
+        var rigaImporto = null;
+        if (mostraImporto) {
+            rigaImporto = document.createElement('tr');
+            var labelImporto = document.createElement('td');
+            labelImporto.className = 'tf-footer-mini-label';
+            labelImporto.textContent = 'Importo:';
+            var valoreImporto = document.createElement('td');
+            valoreImporto.className = 'tf-footer-mini-value tf-footer-importo-valore';
+            rigaImporto.appendChild(labelImporto);
+            rigaImporto.appendChild(valoreImporto);
+        }
+
+        miniTable.appendChild(rigaGiorni);
+        if (rigaImporto) {
+            miniTable.appendChild(rigaImporto);
+        }
+        tdEtichettaTotale.appendChild(miniTable);
         tr.appendChild(tdEtichettaTotale);
 
         data.giorni.forEach(function () {

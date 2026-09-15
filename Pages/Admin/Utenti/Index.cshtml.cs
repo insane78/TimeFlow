@@ -61,6 +61,34 @@ public class IndexModel : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostAggiornaCompensoAsync(int id, decimal compensoGiornaliero)
+    {
+        var accessDenied = await VerificaAdminAsync();
+        if (accessDenied != null)
+        {
+            return accessDenied;
+        }
+
+        if (compensoGiornaliero < 0)
+        {
+            Messaggio = "Il compenso giornaliero non può essere negativo.";
+            return RedirectToPage();
+        }
+
+        var utente = await _dbContext.Users.FindAsync(id);
+        if (utente == null)
+        {
+            return NotFound();
+        }
+
+        utente.CompensoGiornaliero = Math.Round(compensoGiornaliero, 2);
+        await _dbContext.SaveChangesAsync();
+
+        Messaggio = $"Compenso giornaliero di {utente.NomeCompleto} aggiornato a {utente.CompensoGiornaliero:C2}.";
+
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostToggleAdminAsync(int id)
     {
         var accessDenied = await VerificaAdminAsync();

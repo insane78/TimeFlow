@@ -33,7 +33,7 @@ public class ExternalLoginCallbackModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string? returnUrl = null)
     {
-        returnUrl ??= Url.Content("~/");
+        returnUrl ??= Url.Content("~/Timesheet");
 
         var info = await _signInManager.GetExternalLoginInfoAsync();
         if (info == null)

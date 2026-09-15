@@ -23,6 +23,11 @@ public class Utente : IdentityUser<int>
 
     public DateTime DataRegistrazione { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Compenso giornaliero (per 8 ore lavorate), espresso in euro con due decimali.
+    /// </summary>
+    public decimal CompensoGiornaliero { get; set; }
+
     public ICollection<Cliente> Clienti { get; set; } = new List<Cliente>();
     public ICollection<RegistrazioneOre> RegistrazioniOre { get; set; } = new List<RegistrazioneOre>();
 }

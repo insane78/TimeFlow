@@ -220,6 +220,10 @@ namespace TimeFlow.Data.Migrations
                     b.Property<bool>("Autorizzato")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<decimal>("CompensoGiornaliero")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("longtext");

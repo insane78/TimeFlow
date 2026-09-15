@@ -60,6 +60,10 @@ public class TimeFlowDbContext : IdentityUserContext<Utente, int>
             .Property(r => r.Ore)
             .HasPrecision(5, 2);
 
+        builder.Entity<Utente>()
+            .Property(u => u.CompensoGiornaliero)
+            .HasPrecision(8, 2);
+
         builder.Entity<RegistrazioneOre>()
             .HasIndex(r => new { r.UtenteId, r.Data, r.ProgettoId, r.AttivitaId })
             .IsUnique();

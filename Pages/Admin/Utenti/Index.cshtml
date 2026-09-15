@@ -19,6 +19,7 @@
             <th>Registrato il</th>
             <th>Autorizzato</th>
             <th>Admin</th>
+            <th>Compenso giornaliero (8h)</th>
             <th></th>
         </tr>
     </thead>
@@ -31,6 +32,16 @@
                 <td>@utente.DataRegistrazione.ToLocalTime().ToString("dd/MM/yyyy")</td>
                 <td>@(utente.Autorizzato ? "Sì" : "No")</td>
                 <td>@(utente.Admin ? "Sì" : "No")</td>
+                <td>
+                    <form method="post" asp-page-handler="AggiornaCompenso" asp-route-id="@utente.Id" class="d-flex gap-2 align-items-center">
+                        <div class="input-group input-group-sm" style="max-width: 140px;">
+                            <span class="input-group-text">€</span>
+                            <input type="number" name="compensoGiornaliero" class="form-control" step="0.01" min="0"
+                                   value="@utente.CompensoGiornaliero.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Salva</button>
+                    </form>
+                </td>
                 <td class="d-flex gap-2">
                     <form method="post" asp-page-handler="ToggleAutorizzato" asp-route-id="@utente.Id">
                         <button type="submit" class="btn btn-sm @(utente.Autorizzato ? "btn-outline-danger" : "btn-outline-success")">

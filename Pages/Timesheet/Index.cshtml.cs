@@ -29,6 +29,7 @@ public class IndexModel : PageModel
     public List<GiornoInfo> Giorni { get; set; } = new();
     public List<RigaTimesheet> Righe { get; set; } = new();
     public List<ClienteDto> Clienti { get; set; } = new();
+    public decimal? CompensoGiornaliero { get; set; }
 
     public async Task OnGetAsync(int? anno, int? mese)
     {
@@ -39,6 +40,12 @@ public class IndexModel : PageModel
         CalcolaGiorni();
 
         var utenteId = int.Parse(_userManager.GetUserId(User)!);
+
+        var compensoUtente = await _dbContext.Users
+            .Where(u => u.Id == utenteId)
+            .Select(u => (decimal?)u.CompensoGiornaliero)
+            .FirstOrDefaultAsync();
+        CompensoGiornaliero = compensoUtente is > 0 ? compensoUtente : null;
 
         Clienti = await _dbContext.Clienti
             .Where(c => c.UtenteId == utenteId)
@@ -610,7 +617,8 @@ public class IndexModel : PageModel
                 Giorno = giorno,
                 NomeGiornoBreve = cultura.DateTimeFormat.GetAbbreviatedDayName(data.DayOfWeek),
                 Weekend = weekend,
-                Festivo = festivita.Contains(data)
+                Festivo = festivita.Contains(data),
+                Oggi = data == DateOnly.FromDateTime(DateTime.Today)
             });
         }
     }
@@ -665,6 +673,7 @@ public class IndexModel : PageModel
         public string NomeGiornoBreve { get; set; } = string.Empty;
         public bool Weekend { get; set; }
         public bool Festivo { get; set; }
+        public bool Oggi { get; set; }
     }
 
     public class RigaTimesheet
