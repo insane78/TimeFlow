@@ -304,6 +304,14 @@ footer.footer {
   text-align: center;
 }
 
+.tf-grid th.tf-giorni-col,
+.tf-grid td.tf-giorni-riga,
+.tf-grid tfoot .tf-giorni-generale {
+  width: 70px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .tf-grid .tf-ore {
   text-align: center;
   padding: 0.1rem 0;
@@ -379,7 +387,9 @@ footer.footer {
 
 .tf-grid td.tf-totale,
 .tf-grid tfoot .tf-totale-colonna,
-.tf-grid tfoot .tf-totale-generale {
+.tf-grid tfoot .tf-totale-generale,
+.tf-grid td.tf-giorni-riga,
+.tf-grid tfoot .tf-giorni-generale {
   background-color: #52697a;
   color: #f8f9fa;
   font-weight: 700;
@@ -389,6 +399,20 @@ footer.footer {
 
 .tf-grid tfoot .tf-footer-comandi .btn {
   white-space: nowrap;
+}
+
+.tf-grid tfoot .tf-footer-comandi .tf-icon-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tf-grid .tf-btn-icon-svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .tf-grid th.tf-festivo,

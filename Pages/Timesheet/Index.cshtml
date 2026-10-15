@@ -55,6 +55,78 @@
     </div>
 </div>
 
+<div class="modal fade" id="tf-modal-rapporto-progetti" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rapporto giorni per progetto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label d-block mb-2">Modalità</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tf-rapporto-modalita" id="tf-rapporto-modalita-periodo" value="periodo" checked>
+                        <label class="form-check-label" for="tf-rapporto-modalita-periodo">Periodo</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tf-rapporto-modalita" id="tf-rapporto-modalita-attivita" value="attivita">
+                        <label class="form-check-label" for="tf-rapporto-modalita-attivita">Cliente/Progetto/Attività (storico fino a oggi)</label>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end" id="tf-rapporto-sezione-periodo">
+                    <div class="col-md-6">
+                        <label for="tf-rapporto-inizio" class="form-label">Da (mese/anno)</label>
+                        <input type="month" id="tf-rapporto-inizio" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="tf-rapporto-fine" class="form-label">A (mese/anno)</label>
+                        <input type="month" id="tf-rapporto-fine" class="form-control" />
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end d-none mt-0" id="tf-rapporto-sezione-attivita">
+                    <div class="col-md-4">
+                        <label for="tf-rapporto-cliente" class="form-label">Cliente</label>
+                        <select id="tf-rapporto-cliente" class="form-select"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="tf-rapporto-progetto" class="form-label">Progetto</label>
+                        <select id="tf-rapporto-progetto" class="form-select"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="tf-rapporto-attivita" class="form-label">Attività (opzionale)</label>
+                        <select id="tf-rapporto-attivita" class="form-select"></select>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" id="tf-rapporto-calcola">Calcola</button>
+                </div>
+                <div class="mt-3 d-none" id="tf-rapporto-errore"></div>
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Progetto</th>
+                                <th class="text-end">Totale ore</th>
+                                <th class="text-end">Totale giorni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tf-rapporto-righe">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Seleziona i parametri e premi Calcola.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @{
     var opzioniJson = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
 }
@@ -72,7 +144,9 @@
             salvaCellaUrl: '@Url.Page("./Index", "SalvaCella")',
             aggiornaRigaUrl: '@Url.Page("./Index", "AggiornaRiga")',
             esportaMeseUrl: '@Url.Page("./Index", "EsportaMese", new { anno = Model.Anno, mese = Model.Mese })',
-            esportaClienteUrlBase: '@Url.Page("./Index", "EsportaCliente")'
+            esportaClienteUrlBase: '@Url.Page("./Index", "EsportaCliente")',
+            rapportoGiorniProgettoUrlBase: '@Url.Page("./Index", "RapportoGiorniProgetto")',
+            rapportoAttivitaStoricoUrlBase: '@Url.Page("./Index", "RapportoAttivitaStorico")'
         };
     </script>
     <script src="~/js/timesheet.js" asp-append-version="true"></script>

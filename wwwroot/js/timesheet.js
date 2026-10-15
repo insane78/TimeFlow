@@ -18,6 +18,15 @@
         return v.toString().replace('.', ',');
     }
 
+    function formattaNumero(v, decimali) {
+        return v.toLocaleString('it-IT', { minimumFractionDigits: decimali, maximumFractionDigits: decimali });
+    }
+
+    function valoreMeseCorrente() {
+        var mese = data.mese < 10 ? '0' + data.mese : String(data.mese);
+        return data.anno + '-' + mese;
+    }
+
     function trovaCliente(nome) {
         return data.clienti.find(function (c) { return c.nome === nome; });
     }
@@ -55,7 +64,7 @@
 
     var table = document.createElement('table');
     table.className = 'tf-grid table table-bordered table-sm';
-    table.style.minWidth = (445 + data.giorniNelMese * 34) + 'px';
+    table.style.minWidth = (510 + data.giorniNelMese * 34) + 'px';
 
     var thead = document.createElement('thead');
     var headRow = document.createElement('tr');
@@ -99,6 +108,7 @@
     });
 
     aggiungiHeaderCell('Totale', 'tf-totale-col');
+    aggiungiHeaderCell('Giorni', 'tf-giorni-col');
 
     thead.appendChild(headRow);
     table.appendChild(thead);
@@ -161,6 +171,11 @@
         });
         var totaleEl = rigaEl.querySelector('.tf-totale');
         totaleEl.textContent = totale > 0 ? totale.toString().replace('.', ',') : '';
+        var giorniEl = rigaEl.querySelector('.tf-giorni-riga');
+        if (giorniEl) {
+            var giorni = Math.round((totale / 8) * 1000) / 1000;
+            giorniEl.textContent = giorni !== 0 ? formattaNumero(giorni, 3) : '';
+        }
         calcolaTotaliColonne();
     }
 
@@ -305,7 +320,7 @@
 
     function aggiornaColoreRiga(tr, colore) {
         tr.querySelectorAll('td').forEach(function (td) {
-            if (td.classList.contains('tf-weekend') || td.classList.contains('tf-festivo') || td.classList.contains('tf-totale')) {
+            if (td.classList.contains('tf-weekend') || td.classList.contains('tf-festivo') || td.classList.contains('tf-totale') || td.classList.contains('tf-giorni-riga')) {
                 return;
             }
             td.style.backgroundColor = colore || '';
@@ -397,6 +412,9 @@
         var totaleTd = document.createElement('td');
         totaleTd.className = 'tf-totale text-center';
         tr.appendChild(totaleTd);
+        var giorniTd = document.createElement('td');
+        giorniTd.className = 'tf-giorni-riga text-center';
+        tr.appendChild(giorniTd);
 
         tbody.appendChild(tr);
         calcolaTotaleRiga(tr);
@@ -429,11 +447,17 @@
             totaleGeneraleEl.textContent = totaleGenerale > 0 ? totaleGenerale.toString().replace('.', ',') : '';
         }
 
+        var giorniGeneraliEl = tfoot.querySelector('.tf-giorni-generale');
+        if (giorniGeneraliEl) {
+            var giorniGenerali = Math.round((totaleGenerale / 8) * 1000) / 1000;
+            giorniGeneraliEl.textContent = giorniGenerali !== 0 ? formattaNumero(giorniGenerali, 3) : '';
+        }
+
         var giorniValoreEl = tfoot.querySelector('.tf-footer-giorni-valore');
         if (giorniValoreEl) {
             var giornate = totaleGenerale / 8;
             giornate = Math.round(giornate * 1000) / 1000;
-            giorniValoreEl.textContent = giornate.toString().replace('.', ',');
+            giorniValoreEl.textContent = giornate !== 0 ? formattaNumero(giornate, 3) : '';
 
             var importoValoreEl = tfoot.querySelector('.tf-footer-importo-valore');
             if (importoValoreEl) {
@@ -457,31 +481,48 @@
 
         var btnAggiungi = document.createElement('button');
         btnAggiungi.type = 'button';
-        btnAggiungi.className = 'btn btn-sm btn-outline-primary me-1';
-        btnAggiungi.textContent = 'Aggiungi riga';
+        btnAggiungi.className = 'btn btn-sm btn-outline-primary me-1 tf-icon-btn';
+        btnAggiungi.title = 'Aggiungi riga';
+        btnAggiungi.setAttribute('aria-label', 'Aggiungi riga');
+        btnAggiungi.innerHTML = '<svg class="tf-btn-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/></svg>';
         btnAggiungi.addEventListener('click', function () {
             aggiungiRiga(rigaVuota());
         });
 
         var btnEsportaMese = document.createElement('button');
         btnEsportaMese.type = 'button';
-        btnEsportaMese.className = 'btn btn-sm btn-outline-secondary me-1';
-        btnEsportaMese.textContent = 'Esporta mese';
+        btnEsportaMese.className = 'btn btn-sm btn-outline-secondary me-1 tf-icon-btn';
+        btnEsportaMese.title = 'Esporta mese';
+        btnEsportaMese.setAttribute('aria-label', 'Esporta mese');
+        btnEsportaMese.innerHTML = '<svg class="tf-btn-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5Z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l2.5 2.5a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.854 4.354a.5.5 0 1 1-.708-.708l2.5-2.5Z"/></svg>';
         btnEsportaMese.addEventListener('click', function () {
             window.location.href = data.esportaMeseUrl;
         });
 
         var btnEsportaCliente = document.createElement('button');
         btnEsportaCliente.type = 'button';
-        btnEsportaCliente.className = 'btn btn-sm btn-outline-secondary';
-        btnEsportaCliente.textContent = 'Esporta per cliente';
+        btnEsportaCliente.className = 'btn btn-sm btn-outline-secondary tf-icon-btn';
+        btnEsportaCliente.title = 'Esporta per cliente';
+        btnEsportaCliente.setAttribute('aria-label', 'Esporta per cliente');
+        btnEsportaCliente.innerHTML = '<svg class="tf-btn-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 1a1 1 0 0 0-1 1v12l2.8-1.4a.5.5 0 0 1 .4 0L9 14V2a1 1 0 0 0-1-1H4Zm5 1.2V14l2.8-1.4a.5.5 0 0 1 .4 0L15 14V2a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1.2Z"/></svg>';
         btnEsportaCliente.addEventListener('click', function () {
             apriModalEsportaCliente();
+        });
+
+        var btnRapportoProgetti = document.createElement('button');
+        btnRapportoProgetti.type = 'button';
+        btnRapportoProgetti.className = 'btn btn-sm btn-outline-secondary tf-icon-btn';
+        btnRapportoProgetti.title = 'Rapporto giorni per progetto';
+        btnRapportoProgetti.setAttribute('aria-label', 'Rapporto giorni per progetto');
+        btnRapportoProgetti.innerHTML = '<svg class="tf-btn-icon-svg" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M0 0h1v15h15v1H0V0Zm14 2h1v12H3v-1h11V2ZM4 9h2v4H4V9Zm3-3h2v7H7V6Zm3 2h2v5h-2V8Z"/></svg>';
+        btnRapportoProgetti.addEventListener('click', function () {
+            apriModalRapportoProgetti();
         });
 
         tdComandi.appendChild(btnAggiungi);
         tdComandi.appendChild(btnEsportaMese);
         tdComandi.appendChild(btnEsportaCliente);
+        tdComandi.appendChild(btnRapportoProgetti);
         tr.appendChild(tdComandi);
 
         var tdEtichettaTotale = document.createElement('td');
@@ -535,6 +576,9 @@
         var tdTotaleGenerale = document.createElement('td');
         tdTotaleGenerale.className = 'tf-totale-generale text-center';
         tr.appendChild(tdTotaleGenerale);
+        var tdGiorniGenerali = document.createElement('td');
+        tdGiorniGenerali.className = 'tf-giorni-generale text-center';
+        tr.appendChild(tdGiorniGenerali);
 
         tfoot.appendChild(tr);
     }
@@ -573,6 +617,196 @@
         modal.show();
     }
 
+    function mostraErroreRapporto(testo) {
+        var erroreEl = document.getElementById('tf-rapporto-errore');
+        if (!erroreEl) {
+            return;
+        }
+        if (!testo) {
+            erroreEl.className = 'mt-3 d-none';
+            erroreEl.textContent = '';
+            return;
+        }
+        erroreEl.className = 'mt-3 alert alert-danger mb-0';
+        erroreEl.textContent = testo;
+    }
+
+    function formattaPeriodoRapporto() {
+        var modalita = document.querySelector('input[name="tf-rapporto-modalita"]:checked');
+        return modalita && modalita.value === 'attivita' ? 'selezione attività' : 'periodo selezionato';
+    }
+
+    function renderRigheRapporto(righe) {
+        var tbodyRapporto = document.getElementById('tf-rapporto-righe');
+        if (!tbodyRapporto) {
+            return;
+        }
+        tbodyRapporto.innerHTML = '';
+
+        if (!righe || righe.length === 0) {
+            var trVuota = document.createElement('tr');
+            trVuota.innerHTML = '<td colspan="4" class="text-center text-muted">Nessun dato per ' + formattaPeriodoRapporto() + '.</td>';
+            tbodyRapporto.appendChild(trVuota);
+            return;
+        }
+
+        righe.forEach(function (riga) {
+            var tr = document.createElement('tr');
+            var tdCliente = document.createElement('td');
+            tdCliente.textContent = riga.clienteNome;
+            var tdProgetto = document.createElement('td');
+            tdProgetto.textContent = riga.progettoNome;
+            var tdOre = document.createElement('td');
+            tdOre.className = 'text-end';
+            tdOre.textContent = formattaNumero(riga.totaleOre, 2);
+            var tdGiorni = document.createElement('td');
+            tdGiorni.className = 'text-end';
+            tdGiorni.textContent = formattaNumero(riga.totaleGiorni, 3);
+
+            tr.appendChild(tdCliente);
+            tr.appendChild(tdProgetto);
+            tr.appendChild(tdOre);
+            tr.appendChild(tdGiorni);
+            tbodyRapporto.appendChild(tr);
+        });
+    }
+
+    function svuotaSelect(selectEl, placeholder) {
+        if (!selectEl) {
+            return;
+        }
+        selectEl.innerHTML = '';
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = placeholder;
+        selectEl.appendChild(opt);
+    }
+
+    function popolaSelectClienteRapporto() {
+        var clienteEl = document.getElementById('tf-rapporto-cliente');
+        if (!clienteEl) {
+            return;
+        }
+
+        svuotaSelect(clienteEl, 'Seleziona cliente');
+        data.clienti
+            .slice()
+            .sort(function (a, b) { return a.nome.localeCompare(b.nome); })
+            .forEach(function (cliente) {
+                var opt = document.createElement('option');
+                opt.value = String(cliente.id);
+                opt.textContent = cliente.nome;
+                clienteEl.appendChild(opt);
+            });
+    }
+
+    function popolaSelectProgettoRapporto(clienteId) {
+        var progettoEl = document.getElementById('tf-rapporto-progetto');
+        if (!progettoEl) {
+            return;
+        }
+
+        svuotaSelect(progettoEl, 'Seleziona progetto');
+        svuotaSelect(document.getElementById('tf-rapporto-attivita'), 'Seleziona attività');
+        if (!clienteId) {
+            return;
+        }
+
+        var cliente = data.clienti.find(function (c) { return String(c.id) === String(clienteId); });
+        if (!cliente) {
+            return;
+        }
+
+        cliente.progetti
+            .slice()
+            .sort(function (a, b) { return a.nome.localeCompare(b.nome); })
+            .forEach(function (progetto) {
+                var opt = document.createElement('option');
+                opt.value = String(progetto.id);
+                opt.textContent = progetto.nome;
+                progettoEl.appendChild(opt);
+            });
+    }
+
+    function popolaSelectAttivitaRapporto(clienteId, progettoId) {
+        var attivitaEl = document.getElementById('tf-rapporto-attivita');
+        if (!attivitaEl) {
+            return;
+        }
+
+        svuotaSelect(attivitaEl, 'Seleziona attività');
+        if (!clienteId || !progettoId) {
+            return;
+        }
+
+        var cliente = data.clienti.find(function (c) { return String(c.id) === String(clienteId); });
+        if (!cliente) {
+            return;
+        }
+        var progetto = cliente.progetti.find(function (p) { return String(p.id) === String(progettoId); });
+        if (!progetto) {
+            return;
+        }
+
+        progetto.attivita
+            .slice()
+            .sort(function (a, b) { return a.nome.localeCompare(b.nome); })
+            .forEach(function (attivita) {
+                var opt = document.createElement('option');
+                opt.value = String(attivita.id);
+                opt.textContent = attivita.nome;
+                attivitaEl.appendChild(opt);
+            });
+    }
+
+    function aggiornaSezioniRapporto() {
+        var modalita = document.querySelector('input[name="tf-rapporto-modalita"]:checked');
+        var periodoEl = document.getElementById('tf-rapporto-sezione-periodo');
+        var attivitaEl = document.getElementById('tf-rapporto-sezione-attivita');
+        if (!periodoEl || !attivitaEl || !modalita) {
+            return;
+        }
+
+        if (modalita.value === 'attivita') {
+            periodoEl.classList.add('d-none');
+            attivitaEl.classList.remove('d-none');
+        } else {
+            periodoEl.classList.remove('d-none');
+            attivitaEl.classList.add('d-none');
+        }
+    }
+
+    function apriModalRapportoProgetti() {
+        var inizioEl = document.getElementById('tf-rapporto-inizio');
+        var fineEl = document.getElementById('tf-rapporto-fine');
+        var clienteEl = document.getElementById('tf-rapporto-cliente');
+        var progettoEl = document.getElementById('tf-rapporto-progetto');
+        var attivitaEl = document.getElementById('tf-rapporto-attivita');
+        var meseCorrente = valoreMeseCorrente();
+        if (inizioEl && !inizioEl.value) {
+            inizioEl.value = meseCorrente;
+        }
+        if (fineEl && !fineEl.value) {
+            fineEl.value = meseCorrente;
+        }
+        if (clienteEl && clienteEl.options.length === 0) {
+            popolaSelectClienteRapporto();
+        }
+        if (progettoEl && progettoEl.options.length === 0) {
+            svuotaSelect(progettoEl, 'Seleziona progetto');
+        }
+        if (attivitaEl && attivitaEl.options.length === 0) {
+            svuotaSelect(attivitaEl, 'Seleziona attività');
+        }
+
+        mostraErroreRapporto('');
+        aggiornaSezioniRapporto();
+
+        var modalEl = document.getElementById('tf-modal-rapporto-progetti');
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+
     var btnConfermaEsportaCliente = document.getElementById('tf-esporta-cliente-conferma');
     if (btnConfermaEsportaCliente) {
         btnConfermaEsportaCliente.addEventListener('click', function () {
@@ -593,6 +827,105 @@
             var modalEl = document.getElementById('tf-modal-esporta-cliente');
             var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
             modal.hide();
+        });
+    }
+
+    var btnCalcolaRapporto = document.getElementById('tf-rapporto-calcola');
+    var clienteRapportoEl = document.getElementById('tf-rapporto-cliente');
+    var progettoRapportoEl = document.getElementById('tf-rapporto-progetto');
+    var radioModalitaRapporto = document.querySelectorAll('input[name="tf-rapporto-modalita"]');
+    if (clienteRapportoEl) {
+        clienteRapportoEl.addEventListener('change', function () {
+            popolaSelectProgettoRapporto(clienteRapportoEl.value);
+        });
+    }
+    if (progettoRapportoEl) {
+        progettoRapportoEl.addEventListener('change', function () {
+            var clienteId = clienteRapportoEl ? clienteRapportoEl.value : '';
+            popolaSelectAttivitaRapporto(clienteId, progettoRapportoEl.value);
+        });
+    }
+    radioModalitaRapporto.forEach(function (radio) {
+        radio.addEventListener('change', aggiornaSezioniRapporto);
+    });
+
+    if (btnCalcolaRapporto) {
+        btnCalcolaRapporto.addEventListener('click', function () {
+            mostraErroreRapporto('');
+            var modalita = document.querySelector('input[name="tf-rapporto-modalita"]:checked');
+            if (!modalita) {
+                mostraErroreRapporto('Modalità rapporto non valida.');
+                return;
+            }
+
+            var url = '';
+            if (modalita.value === 'attivita') {
+                var clienteId = clienteRapportoEl ? clienteRapportoEl.value : '';
+                var progettoId = progettoRapportoEl ? progettoRapportoEl.value : '';
+                var attivitaRapportoEl = document.getElementById('tf-rapporto-attivita');
+                var attivitaId = attivitaRapportoEl ? attivitaRapportoEl.value : '';
+                if (!clienteId || !progettoId) {
+                    mostraErroreRapporto('Seleziona cliente e progetto.');
+                    return;
+                }
+
+                var separatoreAttivita = data.rapportoAttivitaStoricoUrlBase.indexOf('?') === -1 ? '?' : '&';
+                url = data.rapportoAttivitaStoricoUrlBase
+                    + separatoreAttivita + 'clienteId=' + encodeURIComponent(clienteId)
+                    + '&progettoId=' + encodeURIComponent(progettoId);
+                if (attivitaId) {
+                    url += '&attivitaId=' + encodeURIComponent(attivitaId);
+                }
+            } else {
+                var inizioEl = document.getElementById('tf-rapporto-inizio');
+                var fineEl = document.getElementById('tf-rapporto-fine');
+                var inizioValore = inizioEl ? inizioEl.value : '';
+                var fineValore = fineEl ? fineEl.value : '';
+
+                if (!inizioValore || !fineValore) {
+                    mostraErroreRapporto('Seleziona mese/anno di inizio e fine.');
+                    return;
+                }
+
+                if (inizioValore > fineValore) {
+                    mostraErroreRapporto('Il periodo iniziale non può essere successivo a quello finale.');
+                    return;
+                }
+
+                var inizioParti = inizioValore.split('-');
+                var fineParti = fineValore.split('-');
+                var annoInizio = parseInt(inizioParti[0], 10);
+                var meseInizio = parseInt(inizioParti[1], 10);
+                var annoFine = parseInt(fineParti[0], 10);
+                var meseFine = parseInt(fineParti[1], 10);
+                var separatorePeriodo = data.rapportoGiorniProgettoUrlBase.indexOf('?') === -1 ? '?' : '&';
+                url = data.rapportoGiorniProgettoUrlBase
+                    + separatorePeriodo + 'annoInizio=' + encodeURIComponent(annoInizio)
+                    + '&meseInizio=' + encodeURIComponent(meseInizio)
+                    + '&annoFine=' + encodeURIComponent(annoFine)
+                    + '&meseFine=' + encodeURIComponent(meseFine);
+            }
+
+            btnCalcolaRapporto.disabled = true;
+            fetch(url, { method: 'GET' })
+                .then(function (response) {
+                    if (!response.ok) {
+                        throw new Error('Impossibile calcolare il rapporto.');
+                    }
+                    return response.json();
+                })
+                .then(function (res) {
+                    if (!res.ok) {
+                        throw new Error(res.errore || 'Errore durante il calcolo del rapporto.');
+                    }
+                    renderRigheRapporto(res.righe);
+                })
+                .catch(function (err) {
+                    mostraErroreRapporto(err.message);
+                })
+                .finally(function () {
+                    btnCalcolaRapporto.disabled = false;
+                });
         });
     }
 

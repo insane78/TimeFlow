@@ -489,6 +489,115 @@ public class IndexModel : PageModel
             nomeFileCliente);
     }
 
+    public async Task<IActionResult> OnGetRapportoGiorniProgettoAsync(int annoInizio, int meseInizio, int annoFine, int meseFine)
+    {
+        if (meseInizio is < 1 or > 12 || meseFine is < 1 or > 12)
+        {
+            return BadRequest(new { ok = false, errore = "Mese non valido." });
+        }
+
+        DateOnly dataInizio;
+        DateOnly dataFine;
+        try
+        {
+            dataInizio = new DateOnly(annoInizio, meseInizio, 1);
+            dataFine = new DateOnly(annoFine, meseFine, 1).AddMonths(1).AddDays(-1);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return BadRequest(new { ok = false, errore = "Periodo non valido." });
+        }
+
+        if (dataInizio > dataFine)
+        {
+            return BadRequest(new { ok = false, errore = "La data iniziale non può essere successiva a quella finale." });
+        }
+
+        var utenteId = int.Parse(_userManager.GetUserId(User)!);
+
+        var righe = await _dbContext.RegistrazioniOre
+            .Where(r => r.UtenteId == utenteId && r.Data >= dataInizio && r.Data <= dataFine)
+            .Select(r => new
+            {
+                ClienteNome = r.Progetto.Cliente.Nome,
+                ProgettoNome = r.Progetto.Nome,
+                r.Ore
+            })
+            .GroupBy(r => new { r.ClienteNome, r.ProgettoNome })
+            .Select(g => new RapportoGiorniProgettoRigaDto
+            {
+                ClienteNome = g.Key.ClienteNome,
+                ProgettoNome = g.Key.ProgettoNome,
+                TotaleOre = g.Sum(x => x.Ore),
+                TotaleGiorni = g.Sum(x => x.Ore) / 8m
+            })
+            .OrderBy(r => r.ClienteNome)
+            .ThenBy(r => r.ProgettoNome)
+            .ToListAsync();
+
+        return new JsonResult(new { ok = true, righe });
+    }
+
+    public async Task<IActionResult> OnGetRapportoAttivitaStoricoAsync(int clienteId, int progettoId, int? attivitaId)
+    {
+        var utenteId = int.Parse(_userManager.GetUserId(User)!);
+        var oggi = DateOnly.FromDateTime(DateTime.Today);
+
+        var progetto = await _dbContext.Progetti
+            .Where(p => p.Id == progettoId &&
+                        p.ClienteId == clienteId &&
+                        p.Cliente.UtenteId == utenteId)
+            .Select(p => new
+            {
+                ClienteNome = p.Cliente.Nome,
+                ProgettoNome = p.Nome
+            })
+            .FirstOrDefaultAsync();
+
+        if (progetto is null)
+        {
+            return BadRequest(new { ok = false, errore = "Cliente o progetto non validi." });
+        }
+
+        if (attivitaId.HasValue)
+        {
+            var attivitaValida = await _dbContext.Attivita
+                .AnyAsync(a => a.Id == attivitaId.Value &&
+                               a.ProgettoId == progettoId &&
+                               a.Progetto.Cliente.UtenteId == utenteId);
+
+            if (!attivitaValida)
+            {
+                return BadRequest(new { ok = false, errore = "Attività non valida." });
+            }
+        }
+
+        var query = _dbContext.RegistrazioniOre
+            .Where(r => r.UtenteId == utenteId &&
+                        r.ProgettoId == progettoId &&
+                        r.Data <= oggi);
+        if (attivitaId.HasValue)
+        {
+            query = query.Where(r => r.AttivitaId == attivitaId.Value);
+        }
+
+        var totaleOre = await query.SumAsync(r => (decimal?)r.Ore) ?? 0m;
+
+        var righe = new List<RapportoGiorniProgettoRigaDto>();
+        if (totaleOre > 0)
+        {
+            righe.Add(new RapportoGiorniProgettoRigaDto
+            {
+                ClienteNome = progetto.ClienteNome,
+                ProgettoNome = progetto.ProgettoNome,
+                TotaleOre = totaleOre,
+                TotaleGiorni = totaleOre / 8m
+            });
+        }
+
+        return new JsonResult(new { ok = true, righe });
+    }
+
     public async Task<IActionResult> OnPostSalvaCellaAsync([FromBody] SalvaCellaRequest request)
     {
         var utenteId = int.Parse(_userManager.GetUserId(User)!);
@@ -707,6 +816,14 @@ public class IndexModel : PageModel
     {
         public int Id { get; set; }
         public string Nome { get; set; } = string.Empty;
+    }
+
+    public class RapportoGiorniProgettoRigaDto
+    {
+        public string ClienteNome { get; set; } = string.Empty;
+        public string ProgettoNome { get; set; } = string.Empty;
+        public decimal TotaleOre { get; set; }
+        public decimal TotaleGiorni { get; set; }
     }
 
     public class SalvaCellaRequest
